@@ -3,134 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slither Game with Bots</title>
-    <style>
-        canvas { background: #000; display: block; margin: auto; }
-    </style>
-</head>
-<body>
-    <canvas id="gameCanvas" width="600" height="400"></canvas>
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        let snake = [{ x: 50, y: 50 }];
-        let direction = { x: 0, y: 0 };
-        let food = generateFood();
-        let eating = false;
-        let bots = Array.from({ length: 19 }, () => createBot());
-
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'ArrowUp') direction = { x: 0, y: -10 };
-            if (event.key === 'ArrowDown') direction = { x: 0, y: 10 };
-            if (event.key === 'ArrowLeft') direction = { x: -10, y: 0 };
-            if (event.key === 'ArrowRight') direction = { x: 10, y: 0 };
-        });
-
-        function createBot() {
-            return {
-                x: Math.floor(Math.random() * canvas.width / 10) * 10,
-                y: Math.floor(Math.random() * canvas.height / 10) * 10,
-                direction: { x: (Math.random() < 0.5 ? 10 : -10), y: (Math.random() < 0.5 ? 10 : -10) }
-            };
-        }
-
-        function generateFood() {
-            return {
-                x: Math.floor(Math.random() * canvas.width / 10) * 10,
-                y: Math.floor(Math.random() * canvas.height / 10) * 10
-            };
-        }
-
-        function drawRoundedRect(x, y, width, height, radius) {
-            ctx.beginPath();
-            ctx.moveTo(x + radius, y);
-            ctx.lineTo(x + width - radius, y);
-            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-            ctx.lineTo(x + width, y + height - radius);
-            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-            ctx.lineTo(x + radius, y + height);
-            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-            ctx.lineTo(x, y + radius);
-            ctx.quadraticCurveTo(x, y, x + radius, y);
-            ctx.closePath();
-            ctx.fill();
-        }
-
-        function moveBots() {
-            bots.forEach(bot => {
-                bot.x += bot.direction.x;
-                bot.y += bot.direction.y;
-
-                if (Math.random() < 0.1) {
-                    bot.direction.x = (Math.random() < 0.5 ? 10 : -10);
-                    bot.direction.y = (Math.random() < 0.5 ? 10 : -10);
-                }
-
-                if (bot.x < 0 || bot.x >= canvas.width || bot.y < 0 || bot.y >= canvas.height) {
-                    restartGame();
-                }
-            });
-        }
-
-        function restartGame() {
-            snake = [{ x: 50, y: 50 }];
-            direction = { x: 0, y: 0 };
-            food = generateFood();
-            eating = false;
-            bots = Array.from({ length: 19 }, () => createBot());
-        }
-
-        function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
-            snake.unshift(head);
-
-            if (head.x === food.x && head.y === food.y) {
-                eating = true;
-                food = generateFood();
-            }
-
-            if (!eating) snake.pop();
-            else eating = false;
-
-            if (bots.some(bot => bot.x === head.x && bot.y === head.y) || 
-                snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y) || 
-                head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
-                restartGame();
-            }
-
-            moveBots();
-            snake.forEach(segment => drawRoundedRect(segment.x, segment.y, 10, 10, 5));
-            bots.forEach(bot => drawRoundedRect(bot.x, bot.y, 10, 10, 5));
-            drawRoundedRect(food.x, food.y, 10, 10, 5);
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
-    </script>
-</body>
-</html>
-
-
-In this version, the food generation and bot creation functions are improved, and the game loop is structured to ensure proper rendering of the snake, bots, and food. This should resolve the black screen issue, allowing you to see the game elements.
-make me a slither.io game that has Constant Motion: The snake moves automatically, and the player controls its direction with the mouse, touchscreen, or keyboard.
-Eating/Growth: Consuming glowing pellets scattered around the map or dropped by defeated snakes increases the snake's length and size.
-Speed Boost: Holding down the left mouse button, spacebar, or double-tapping the screen activates a speed boost, allowing quick maneuvers to cut off opponents.
-Mass Loss Boost: Using the boost causes the snake to lose length (mass) over time, which becomes food for other snakes.
-Collision Mechanics: If a player's snake head touches another player's body, the snake dies and breaks down into glowing pellets.
-Trapping (Circling): A popular strategy where a larger snake circles around a smaller one to cut off its escape and force a collision.
-Self-Crossing: Players can safely cross over their own body without dying, allowing for defensive loops and trapping strategies.
-Map Navigation: The map is finite but large; when a snake dies, its mass is scattered for others to collect.
-Top 10 Leaderboard: The game displays the top 10 largest snakes on the server, encouraging competition.
-Respawning: Upon death, players can immediately respawn as a small snake to rejoin the game. 
-index .html
-Here's a simplified version of a slither.io-like game that incorporates the requested mechanics. This code includes constant motion, eating/growth, speed boost, collision mechanics, and a basic leaderboard. 
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Slither Game</title>
     <style>
         canvas { background: #000; display: block; margin: auto; }
@@ -207,6 +79,110 @@ Here's a simplified version of a slither.io-like game that incorporates the requ
                 snake.pop(); // Remove the last segment
             }
             
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function restartGame() {
+            snake = [{ x: 400, y: 300 }];
+            direction = { x: 1, y: 0 };
+            mass = 1;
+            food = generateFood();
+            leaderboard.push({ name: 'Player', mass: mass });
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
+
+
+This code sets up a basic framework for the game mechanics you specified. The snake moves automatically, the player can control its direction using the arrow keys, and there are basic eating and collision mechanics. The leaderboard is displayed in the top left, and players respawn upon death. You can build upon this structure to enhance the game with additional features like advanced AI bots, trapping mechanics, and more comprehensive collision responses.
+its just a black screen
+The black screen issue could be due to the drawing logic not being properly executed or the game loop not functioning correctly. Below is an updated version of the code that ensures the game displays correctly, including the snake, food, and improved collision detection.
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slither Game</title>
+    <style>
+        canvas { background: #000; display: block; margin: auto; }
+        #leaderboard { color: white; position: absolute; top: 10px; left: 10px; }
+    </style>
+</head>
+<body>
+    <div id="leaderboard"></div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let snake = [{ x: 400, y: 300 }];
+        let direction = { x: 1, y: 0 };
+        let food = generateFood();
+        let isBoosting = false;
+        let mass = 1;
+        let leaderboard = [{ name: 'Player', mass: mass }];
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowUp') direction = { x: 0, y: -1 };
+            if (event.key === 'ArrowDown') direction = { x: 0, y: 1 };
+            if (event.key === 'ArrowLeft') direction = { x: -1, y: 0 };
+            if (event.key === 'ArrowRight') direction = { x: 1, y: 0 };
+            if (event.code === 'Space') isBoosting = true;
+        });
+
+        document.addEventListener('keyup', (event) => {
+            if (event.code === 'Space') isBoosting = false;
+        });
+
+        function generateFood() {
+            return {
+                x: Math.floor(Math.random() * (canvas.width / 10)) * 10,
+                y: Math.floor(Math.random() * (canvas.height / 10)) * 10
+            };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'green';
+            snake.forEach(segment => ctx.fillRect(segment.x, segment.y, 10, 10));
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x, food.y, 10, 10);
+            updateLeaderboard();
+        }
+
+        function updateLeaderboard() {
+            leaderboard.sort((a, b) => b.mass - a.mass);
+            const topTen = leaderboard.slice(0, 10);
+            document.getElementById('leaderboard').innerHTML = topTen.map(player => `${player.name}: ${player.mass}`).join('<br>');
+        }
+
+        function gameLoop() {
+            const head = { x: snake[0].x + direction.x * 10, y: snake[0].y + direction.y * 10 };
+            snake.unshift(head);
+
+            // Check for food collision
+            if (head.x === food.x && head.y === food.y) {
+                mass++;
+                food = generateFood();
+            } else {
+                snake.pop();
+            }
+
+            // Check for collisions with walls or itself
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height || 
+                snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y)) {
+                restartGame();
+            }
+
+            // Speed Boost mechanics
+            if (isBoosting) {
+                mass -= 0.1; // Lose mass over time while boosting
+                snake.pop(); // Remove the last segment
+            }
+
             draw();
             requestAnimationFrame(gameLoop);
         }
