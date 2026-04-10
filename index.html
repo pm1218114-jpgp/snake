@@ -1,161 +1,225 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Epstein Clicker</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slither Game with Bots</title>
     <style>
-        body { 
-            margin: 0;
-            display: flex;
-            height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: radial-gradient(circle, #37474f 0%, #102027 100%);
-            color: white;
-            overflow: hidden;
-        }
-
-        #shop {
-            width: 320px;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-right: 3px solid #64b5f6;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        #game-area {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Image Styling */
-        #target-image {
-            width: 400px; /* Bigger as requested */
-            height: auto;
-            cursor: pointer;
-            user-select: none;
-            transition: transform 0.05s;
-            border: 5px solid #64b5f6;
-            border-radius: 15px;
-            box-shadow: 0 0 30px rgba(100, 181, 246, 0.4);
-        }
-
-        #target-image:active { transform: scale(0.95); }
-        #target-image:hover { transform: scale(1.02); }
-
-        .stats-panel { text-align: center; margin-bottom: 20px; }
-        .count-text { font-size: 52px; font-weight: bold; color: #64b5f6; text-shadow: 2px 2px #000; }
-        
-        button {
-            width: 100%;
-            padding: 15px;
-            font-size: 16px;
-            font-weight: bold;
-            border: none;
-            border-radius: 8px;
-            background: #64b5f6;
-            color: #0d47a1;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        button:hover:not(:disabled) { background: #90caf9; transform: translateY(-2px); }
-        button:disabled { background: #455a64; cursor: not-allowed; color: #90a4ae; }
-        .upgrade-info { font-size: 13px; margin-top: 4px; color: #bbdefb; }
+        canvas { background: #000; display: block; margin: auto; }
     </style>
 </head>
 <body>
-
-    <div id="shop">
-        <h2 style="color: #64b5f6; text-align: center;">Legal & Influence Shop</h2>
-        <hr style="width: 100%; border: 1px solid #455a64;">
-        
-        <div>
-            <button id="clickBtn" onclick="buyClickUpgrade()">⚖️ Hire Lawyer (Cost: 10)</button>
-            <div class="upgrade-info">+1 Click Power</div>
-        </div>
-
-        <div>
-            <button id="autoBtn" onclick="buyAutoUpgrade()">🚁 Private Pilot (Cost: 50)</button>
-            <div class="upgrade-info">+1 Click Per Second (CPS)</div>
-        </div>
-        
-        <div style="margin-top: auto; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 5px;">
-            <div>Power: <span id="power">1</span></div>
-            <div>CPS: <span id="cps">0</span></div>
-        </div>
-    </div>
-
-    <div id="game-area">
-        <div class="stats-panel">
-            <div class="count-text"><span id="count">0</span></div>
-            <div style="font-size: 18px; opacity: 0.8;">Files Collected</div>
-        </div>
-
-        <!-- Image of Jeffrey Epstein -->
-        <img id="target-image" 
-             src="https://upload.wikimedia.org" 
-             alt="Target"
-             onclick="handleClick()">
-    </div>
-
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
     <script>
-        let score = 0;
-        let clickPower = 1;
-        let autoPower = 0;
-        let clickCost = 10;
-        let autoCost = 50;
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let snake = [{ x: 50, y: 50 }];
+        let direction = { x: 0, y: 0 };
+        let food = generateFood();
+        let eating = false;
+        let bots = Array.from({ length: 19 }, () => createBot());
 
-        function updateDisplay() {
-            document.getElementById('count').innerText = Math.floor(score);
-            document.getElementById('power').innerText = clickPower;
-            document.getElementById('cps').innerText = autoPower;
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowUp') direction = { x: 0, y: -10 };
+            if (event.key === 'ArrowDown') direction = { x: 0, y: 10 };
+            if (event.key === 'ArrowLeft') direction = { x: -10, y: 0 };
+            if (event.key === 'ArrowRight') direction = { x: 10, y: 0 };
+        });
+
+        function createBot() {
+            return {
+                x: Math.floor(Math.random() * canvas.width / 10) * 10,
+                y: Math.floor(Math.random() * canvas.height / 10) * 10,
+                direction: { x: (Math.random() < 0.5 ? 10 : -10), y: (Math.random() < 0.5 ? 10 : -10) }
+            };
+        }
+
+        function generateFood() {
+            return {
+                x: Math.floor(Math.random() * canvas.width / 10) * 10,
+                y: Math.floor(Math.random() * canvas.height / 10) * 10
+            };
+        }
+
+        function drawRoundedRect(x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function moveBots() {
+            bots.forEach(bot => {
+                bot.x += bot.direction.x;
+                bot.y += bot.direction.y;
+
+                if (Math.random() < 0.1) {
+                    bot.direction.x = (Math.random() < 0.5 ? 10 : -10);
+                    bot.direction.y = (Math.random() < 0.5 ? 10 : -10);
+                }
+
+                if (bot.x < 0 || bot.x >= canvas.width || bot.y < 0 || bot.y >= canvas.height) {
+                    restartGame();
+                }
+            });
+        }
+
+        function restartGame() {
+            snake = [{ x: 50, y: 50 }];
+            direction = { x: 0, y: 0 };
+            food = generateFood();
+            eating = false;
+            bots = Array.from({ length: 19 }, () => createBot());
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                eating = true;
+                food = generateFood();
+            }
+
+            if (!eating) snake.pop();
+            else eating = false;
+
+            if (bots.some(bot => bot.x === head.x && bot.y === head.y) || 
+                snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y) || 
+                head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+                restartGame();
+            }
+
+            moveBots();
+            snake.forEach(segment => drawRoundedRect(segment.x, segment.y, 10, 10, 5));
+            bots.forEach(bot => drawRoundedRect(bot.x, bot.y, 10, 10, 5));
+            drawRoundedRect(food.x, food.y, 10, 10, 5);
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
+
+
+In this version, the food generation and bot creation functions are improved, and the game loop is structured to ensure proper rendering of the snake, bots, and food. This should resolve the black screen issue, allowing you to see the game elements.
+make me a slither.io game that has Constant Motion: The snake moves automatically, and the player controls its direction with the mouse, touchscreen, or keyboard.
+Eating/Growth: Consuming glowing pellets scattered around the map or dropped by defeated snakes increases the snake's length and size.
+Speed Boost: Holding down the left mouse button, spacebar, or double-tapping the screen activates a speed boost, allowing quick maneuvers to cut off opponents.
+Mass Loss Boost: Using the boost causes the snake to lose length (mass) over time, which becomes food for other snakes.
+Collision Mechanics: If a player's snake head touches another player's body, the snake dies and breaks down into glowing pellets.
+Trapping (Circling): A popular strategy where a larger snake circles around a smaller one to cut off its escape and force a collision.
+Self-Crossing: Players can safely cross over their own body without dying, allowing for defensive loops and trapping strategies.
+Map Navigation: The map is finite but large; when a snake dies, its mass is scattered for others to collect.
+Top 10 Leaderboard: The game displays the top 10 largest snakes on the server, encouraging competition.
+Respawning: Upon death, players can immediately respawn as a small snake to rejoin the game. 
+index .html
+Here's a simplified version of a slither.io-like game that incorporates the requested mechanics. This code includes constant motion, eating/growth, speed boost, collision mechanics, and a basic leaderboard. 
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slither Game</title>
+    <style>
+        canvas { background: #000; display: block; margin: auto; }
+        #leaderboard { color: white; position: absolute; top: 10px; left: 10px; }
+    </style>
+</head>
+<body>
+    <div id="leaderboard"></div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let snake = [{ x: 400, y: 300 }];
+        let direction = { x: 1, y: 0 };
+        let food = generateFood();
+        let isBoosting = false;
+        let mass = 1;
+        let leaderboard = [];
+        
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowUp') direction = { x: 0, y: -1 };
+            if (event.key === 'ArrowDown') direction = { x: 0, y: 1 };
+            if (event.key === 'ArrowLeft') direction = { x: -1, y: 0 };
+            if (event.key === 'ArrowRight') direction = { x: 1, y: 0 };
+            if (event.code === 'Space') isBoosting = true;
+        });
+
+        document.addEventListener('keyup', (event) => {
+            if (event.code === 'Space') isBoosting = false;
+        });
+
+        function generateFood() {
+            return {
+                x: Math.floor(Math.random() * canvas.width / 10) * 10,
+                y: Math.floor(Math.random() * canvas.height / 10) * 10
+            };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            snake.forEach(segment => ctx.fillRect(segment.x, segment.y, 10, 10));
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x, food.y, 10, 10);
+            ctx.fillStyle = 'green';
+            updateLeaderboard();
+        }
+
+        function updateLeaderboard() {
+            leaderboard.sort((a, b) => b.mass - a.mass);
+            const topTen = leaderboard.slice(0, 10);
+            document.getElementById('leaderboard').innerHTML = topTen.map(player => `${player.name}: ${player.mass}`).join('<br>');
+        }
+
+        function gameLoop() {
+            const head = { x: snake[0].x + direction.x * 10, y: snake[0].y + direction.y * 10 };
+            snake.unshift(head);
+
+            // Check for food collision
+            if (head.x === food.x && head.y === food.y) {
+                mass++;
+                food = generateFood();
+            } else {
+                snake.pop();
+            }
+
+            // Check for collisions with walls or itself
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height || snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y)) {
+                restartGame();
+            }
+
+            // Speed Boost mechanics
+            if (isBoosting) {
+                mass -= 0.1; // Lose mass over time while boosting
+                snake.pop(); // Remove the last segment
+            }
             
-            const clickBtn = document.getElementById('clickBtn');
-            clickBtn.innerText = `⚖️ Hire Lawyer (Cost: ${clickCost})`;
-            clickBtn.disabled = score < clickCost;
-
-            const autoBtn = document.getElementById('autoBtn');
-            autoBtn.innerText = `🚁 Private Pilot (Cost: ${autoCost})`;
-            autoBtn.disabled = score < autoCost;
+            draw();
+            requestAnimationFrame(gameLoop);
         }
 
-        function handleClick() {
-            score += clickPower;
-            updateDisplay();
+        function restartGame() {
+            snake = [{ x: 400, y: 300 }];
+            direction = { x: 1, y: 0 };
+            mass = 1;
+            food = generateFood();
+            leaderboard.push({ name: 'Player', mass: mass });
         }
 
-        function buyClickUpgrade() {
-            if (score >= clickCost) {
-                score -= clickCost;
-                clickPower += 1;
-                clickCost = Math.ceil(clickCost * 1.6);
-                updateDisplay();
-            }
-        }
-
-        function buyAutoUpgrade() {
-            if (score >= autoCost) {
-                score -= autoCost;
-                autoPower += 1;
-                autoCost = Math.ceil(autoCost * 1.8);
-                updateDisplay();
-            }
-        }
-
-        // CPS Loop
-        setInterval(() => {
-            if (autoPower > 0) {
-                score += autoPower;
-                updateDisplay();
-            }
-        }, 1000);
-
-        updateDisplay();
+        gameLoop();
     </script>
 </body>
 </html>
