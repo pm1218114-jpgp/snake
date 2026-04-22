@@ -3,199 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slither Game</title>
+    <title>Interactive Booklet</title>
     <style>
-        canvas { background: #000; display: block; margin: auto; }
-        #leaderboard { color: white; position: absolute; top: 10px; left: 10px; }
+        body { font-family: Arial, sans-serif; }
+        .booklet { margin: 20px; }
+        .token-counter { margin: 20px 0; }
     </style>
 </head>
 <body>
-    <div id="leaderboard"></div>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="booklet">
+        <h1>My Booklet</h1>
+        <p>This is a simple booklet where you can add tokens.</p>
+        <div class="token-counter">
+            <h2>Tokens: <span id="tokenCount">0</span></h2>
+            <button id="add1">Add 1</button>
+            <button id="add10">Add 10</button>
+            <button id="add100">Add 100</button>
+            <button id="add1000">Add 1000</button>
+        </div>
+    </div>
+
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        let snake = [{ x: 400, y: 300 }];
-        let direction = { x: 1, y: 0 };
-        let food = generateFood();
-        let isBoosting = false;
-        let mass = 1;
-        let leaderboard = [];
-        
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'ArrowUp') direction = { x: 0, y: -1 };
-            if (event.key === 'ArrowDown') direction = { x: 0, y: 1 };
-            if (event.key === 'ArrowLeft') direction = { x: -1, y: 0 };
-            if (event.key === 'ArrowRight') direction = { x: 1, y: 0 };
-            if (event.code === 'Space') isBoosting = true;
-        });
+        let tokenCount = 0;
+        document.getElementById('add1').onclick = () => updateTokenCount(1);
+        document.getElementById('add10').onclick = () => updateTokenCount(10);
+        document.getElementById('add100').onclick = () => updateTokenCount(100);
+        document.getElementById('add1000').onclick = () => updateTokenCount(1000);
 
-        document.addEventListener('keyup', (event) => {
-            if (event.code === 'Space') isBoosting = false;
-        });
-
-        function generateFood() {
-            return {
-                x: Math.floor(Math.random() * canvas.width / 10) * 10,
-                y: Math.floor(Math.random() * canvas.height / 10) * 10
-            };
+        function updateTokenCount(amount) {
+            tokenCount += amount;
+            document.getElementById('tokenCount').innerText = tokenCount;
         }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            snake.forEach(segment => ctx.fillRect(segment.x, segment.y, 10, 10));
-            ctx.fillStyle = 'red';
-            ctx.fillRect(food.x, food.y, 10, 10);
-            ctx.fillStyle = 'green';
-            updateLeaderboard();
-        }
-
-        function updateLeaderboard() {
-            leaderboard.sort((a, b) => b.mass - a.mass);
-            const topTen = leaderboard.slice(0, 10);
-            document.getElementById('leaderboard').innerHTML = topTen.map(player => `${player.name}: ${player.mass}`).join('<br>');
-        }
-
-        function gameLoop() {
-            const head = { x: snake[0].x + direction.x * 10, y: snake[0].y + direction.y * 10 };
-            snake.unshift(head);
-
-            // Check for food collision
-            if (head.x === food.x && head.y === food.y) {
-                mass++;
-                food = generateFood();
-            } else {
-                snake.pop();
-            }
-
-            // Check for collisions with walls or itself
-            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height || snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y)) {
-                restartGame();
-            }
-
-            // Speed Boost mechanics
-            if (isBoosting) {
-                mass -= 0.1; // Lose mass over time while boosting
-                snake.pop(); // Remove the last segment
-            }
-            
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        function restartGame() {
-            snake = [{ x: 400, y: 300 }];
-            direction = { x: 1, y: 0 };
-            mass = 1;
-            food = generateFood();
-            leaderboard.push({ name: 'Player', mass: mass });
-        }
-
-        gameLoop();
-    </script>
-</body>
-</html>
-
-
-This code sets up a basic framework for the game mechanics you specified. The snake moves automatically, the player can control its direction using the arrow keys, and there are basic eating and collision mechanics. The leaderboard is displayed in the top left, and players respawn upon death. You can build upon this structure to enhance the game with additional features like advanced AI bots, trapping mechanics, and more comprehensive collision responses.
-its just a black screen
-The black screen issue could be due to the drawing logic not being properly executed or the game loop not functioning correctly. Below is an updated version of the code that ensures the game displays correctly, including the snake, food, and improved collision detection.
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slither Game</title>
-    <style>
-        canvas { background: #000; display: block; margin: auto; }
-        #leaderboard { color: white; position: absolute; top: 10px; left: 10px; }
-    </style>
-</head>
-<body>
-    <div id="leaderboard"></div>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        let snake = [{ x: 400, y: 300 }];
-        let direction = { x: 1, y: 0 };
-        let food = generateFood();
-        let isBoosting = false;
-        let mass = 1;
-        let leaderboard = [{ name: 'Player', mass: mass }];
-
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'ArrowUp') direction = { x: 0, y: -1 };
-            if (event.key === 'ArrowDown') direction = { x: 0, y: 1 };
-            if (event.key === 'ArrowLeft') direction = { x: -1, y: 0 };
-            if (event.key === 'ArrowRight') direction = { x: 1, y: 0 };
-            if (event.code === 'Space') isBoosting = true;
-        });
-
-        document.addEventListener('keyup', (event) => {
-            if (event.code === 'Space') isBoosting = false;
-        });
-
-        function generateFood() {
-            return {
-                x: Math.floor(Math.random() * (canvas.width / 10)) * 10,
-                y: Math.floor(Math.random() * (canvas.height / 10)) * 10
-            };
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'green';
-            snake.forEach(segment => ctx.fillRect(segment.x, segment.y, 10, 10));
-            ctx.fillStyle = 'red';
-            ctx.fillRect(food.x, food.y, 10, 10);
-            updateLeaderboard();
-        }
-
-        function updateLeaderboard() {
-            leaderboard.sort((a, b) => b.mass - a.mass);
-            const topTen = leaderboard.slice(0, 10);
-            document.getElementById('leaderboard').innerHTML = topTen.map(player => `${player.name}: ${player.mass}`).join('<br>');
-        }
-
-        function gameLoop() {
-            const head = { x: snake[0].x + direction.x * 10, y: snake[0].y + direction.y * 10 };
-            snake.unshift(head);
-
-            // Check for food collision
-            if (head.x === food.x && head.y === food.y) {
-                mass++;
-                food = generateFood();
-            } else {
-                snake.pop();
-            }
-
-            // Check for collisions with walls or itself
-            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height || 
-                snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y)) {
-                restartGame();
-            }
-
-            // Speed Boost mechanics
-            if (isBoosting) {
-                mass -= 0.1; // Lose mass over time while boosting
-                snake.pop(); // Remove the last segment
-            }
-
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        function restartGame() {
-            snake = [{ x: 400, y: 300 }];
-            direction = { x: 1, y: 0 };
-            mass = 1;
-            food = generateFood();
-            leaderboard.push({ name: 'Player', mass: mass });
-        }
-
-        gameLoop();
     </script>
 </body>
 </html>
