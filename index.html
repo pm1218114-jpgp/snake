@@ -1,23 +1,318 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Clicker Game</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f5f5f5; }
+        button { font-size: 20px; padding: 10px 20px; margin: 10px; }
+        .building, .upgrade, .achievement { margin: 20px; }
+        #buildings, #upgrades, #achievements { display: inline-block; vertical-align: top; }
+        #seasonalEvents { margin: 20px; }
+        .hidden { display: none; }
+    </style>
+</head>
 <body>
-  <button id="btn">Count: 0</button>
-  <button id="start">Start</button>
-  <button id="stop">Stop</button>
+    <h1>Cookie Clicker Game</h1>
+    <div>Total Cookies: <span id="cookieCount">0</span></div>
+    <button id="cookieButton">Click me!</button>
+    
+    <div id="buildings">
+        <h2>Buildings</h2>
+        <div class="building">
+            <span>Cursors: </span><span id="cursorCount">0</span> 
+            <button id="buyCursor">Buy Cursor (Cost: <span id="cursorCost">15</span>)</button>
+        </div>
+        <div class="building">
+            <span>Grandmas: </span><span id="grandmaCount">0</span> 
+            <button id="buyGrandma">Buy Grandma (Cost: <span id="grandmaCost">100</span>)</button>
+        </div>
+        <div class="building">
+            <span>Farms: </span><span id="farmCount">0</span> 
+            <button id="buyFarm">Buy Farm (Cost: <span id="farmCost">1,200</span>)</button>
+        </div>
+        <div class="building">
+            <span>Mines: </span><span id="mineCount">0</span> 
+            <button id="buyMine">Buy Mine (Cost: <span id="mineCost">10,000</span>)</button>
+        </div>
+        <div class="building">
+            <span>Factories: </span><span id="factoryCount">0</span> 
+            <button id="buyFactory">Buy Factory (Cost: <span id="factoryCost">15,000</span>)</button>
+        </div>
+        <div class="building">
+            <span>Banks: </span><span id="bankCount">0</span> 
+            <button id="buyBank">Buy Bank (Cost: <span id="bankCost">100,000</span>)</button>
+        </div>
+        <div class="building">
+            <span>Temples: </span><span id="templeCount">0</span> 
+            <button id="buyTemple">Buy Temple (Cost: <span id="templeCost">1,000,000</span>)</button>
+        </div>
+    </div>
+    
+    <div id="upgrades">
+        <h2>Upgrades</h2>
+        <button id="upgradeEfficiency">Upgrade Efficiency (Cost: <span id="upgradeCost">50</span>)</button>
+        <button id="upgradeCursors">Upgrade Cursors (Cost: <span id="cursorUpgradeCost">200</span>)</button>
+        <button id="upgradeGrandmas">Upgrade Grandmas (Cost: <span id="grandmaUpgradeCost">500</span>)</button>
+        <button id="upgradeFarms">Upgrade Farms (Cost: <span id="farmUpgradeCost">1,500</span>)</button>
+    </div>
 
-  <script>
-    let count = 0, timer = null;
-    const btn = document.getElementById('btn');
-    btn.onclick = () => btn.textContent = `Count: ${++count}`;
+    <div id="achievements">
+        <h2>Achievements</h2>
+        <div id="achievementList"></div>
+    </div>
 
-    document.getElementById('start').onclick = () => {
-      if (!timer) timer = setInterval(() => btn.click(), 100);
-    };
+    <div id="seasonalEvents">
+        <h2>Seasonal Events</h2>
+        <button id="activateChristmas">Activate Christmas Event</button>
+        <button id="activateHalloween">Activate Halloween Event</button>
+    </div>
 
-    document.getElementById('stop').onclick = () => {
-      clearInterval(timer);
-      timer = null;
-    };
-  </script>
+    <script>
+        let cookies = 0;
+        let cursorCount = 0;
+        let grandmaCount = 0;
+        let farmCount = 0;
+        let mineCount = 0;
+        let factoryCount = 0;
+        let bankCount = 0;
+        let templeCount = 0;
+        let cookiePerClick = 1;
+        let cookieProduction = 0;
+        let upgradeCost = 50;
+        let cursorUpgradeCost = 200;
+        let grandmaUpgradeCost = 500;
+        let farmUpgradeCost = 1500;
+        let achievements = [];
+
+        const cookieButton = document.getElementById("cookieButton");
+        const cookieCountDisplay = document.getElementById("cookieCount");
+        const cursorCostDisplay = document.getElementById("cursorCost");
+        const grandmaCostDisplay = document.getElementById("grandmaCost");
+        const farmCostDisplay = document.getElementById("farmCost");
+        const mineCostDisplay = document.getElementById("mineCost");
+        const factoryCostDisplay = document.getElementById("factoryCost");
+        const bankCostDisplay = document.getElementById("bankCost");
+        const templeCostDisplay = document.getElementById("templeCost");
+        const cursorCountDisplay = document.getElementById("cursorCount");
+        const grandmaCountDisplay = document.getElementById("grandmaCount");
+        const farmCountDisplay = document.getElementById("farmCount");
+        const mineCountDisplay = document.getElementById("mineCount");
+        const factoryCountDisplay = document.getElementById("factoryCount");
+        const bankCountDisplay = document.getElementById("bankCount");
+        const templeCountDisplay = document.getElementById("templeCount");
+        const achievementList = document.getElementById("achievementList");
+
+        function updateDisplay() {
+            cookieCountDisplay.textContent = cookies.toLocaleString();
+            cursorCountDisplay.textContent = cursorCount;
+            grandmaCountDisplay.textContent = grandmaCount;
+            farmCountDisplay.textContent = farmCount;
+            mineCountDisplay.textContent = mineCount;
+            factoryCountDisplay.textContent = factoryCount;
+            bankCountDisplay.textContent = bankCount;
+            templeCountDisplay.textContent = templeCount;
+            cursorCostDisplay.textContent = Math.floor(15 * Math.pow(1.15, cursorCount));
+            grandmaCostDisplay.textContent = Math.floor(100 * Math.pow(1.15, grandmaCount));
+            farmCostDisplay.textContent = Math.floor(1200 * Math.pow(1.15, farmCount));
+            mineCostDisplay.textContent = Math.floor(10000 * Math.pow(1.15, mineCount));
+            factoryCostDisplay.textContent = Math.floor(15000 * Math.pow(1.15, factoryCount));
+            bankCostDisplay.textContent = Math.floor(100000 * Math.pow(1.15, bankCount));
+            templeCostDisplay.textContent = Math.floor(1000000 * Math.pow(1.15, templeCount));
+        }
+
+        function checkAchievements() {
+            if (cookies >= 1000 && !achievements.includes("1000 Cookies")) {
+                achievements.push("1000 Cookies");
+                updateAchievements();
+            }
+            if (cursorCount >= 1 && !achievements.includes("First Cursor")) {
+                achievements.push("First Cursor");
+                updateAchievements();
+            }
+            if (grandmaCount >= 1 && !achievements.includes("First Grandma")) {
+                achievements.push("First Grandma");
+                updateAchievements();
+            }
+            if (farmCount >= 1 && !achievements.includes("First Farm")) {
+                achievements.push("First Farm");
+                updateAchievements();
+            }
+            // Add more achievements as desired
+        }
+
+        function updateAchievements() {
+            achievementList.innerHTML = '';
+            achievements.forEach(achievement => {
+                const li = document.createElement("li");
+                li.textContent = achievement;
+                achievementList.appendChild(li);
+            });
+        }
+
+        cookieButton.addEventListener("click", () => {
+            cookies += cookiePerClick;
+            updateDisplay();
+            checkAchievements();
+        });
+
+        document.getElementById("buyCursor").addEventListener("click", () => {
+            const cursorCost = Math.floor(15 * Math.pow(1.15, cursorCount));
+            if (cookies >= cursorCost) {
+                cookies -= cursorCost;
+                cursorCount++;
+                cookieProduction += 0.1; // Cursors produce cookies
+                updateDisplay();
+            }
+        });
+
+        document.getElementById("buyGrandma").addEventListener("click", () => {
+            const grandmaCost = Math.floor(100 * Math.pow(1.15, grandmaCount));
+            if (cookies >= grandmaCost) {
+                cookies -= grandmaCost;
+                grandmaCount++;
+                cookieProduction += 1; // Grandmas produce cookies
+                updateDisplay();
+            }
+        });
+
+        document.getElementById("buyFarm").addEventListener("click", () => {
+            const farmCost = Math.floor(1200 * Math.pow(1.15, farmCount));
+            if (cookies >= farmCost) {
+                cookies -= farmCost;
+                farmCount++;
+                cookieProduction += 8; // Farms produce cookies
+                updateDisplay();
+            }
+        });
+
+        document.getElementById("buyMine").addEventListener("click", () => {
+            const mineCost = Math.floor(10000 * Math.pow(1.15, mineCount));
+            if (cookies >= mineCost) {
+                cookies -= mineCost;
+                mineCount++;
+                cookieProduction += 47; // Mines produce cookies
+                updateDisplay();
+            }
+        });
+
+        document.getElementById("buyFactory").addEventListener("click", () => {
+            const factoryCost = Math.floor(15000 * Math.pow(1.15, factoryCount));
+            if (cookies >= factoryCost) {
+                cookies -= factoryCost;
+                factoryCount++;
+                cookieProduction += 260; // Factories produce cookies
+                updateDisplay();
+            }
+        });
+
+        document.getElementById("buyBank").addEventListener("click", () => {
+            const bankCost = Math.floor(100000 * Math.pow(1.15, bankCount));
+            if (cookies >= bankCost) {
+                cookies -= bankCost;
+                bankCount++;
+                cookieProduction += 1400; // Banks produce cookies
+                updateDisplay();
+            }
+        });
+
+        document.getElementById("buyTemple").addEventListener("click", () => {
+            const templeCost = Math.floor(1000000 * Math.pow(1.15, templeCount));
+            if (cookies >= templeCost) {
+                cookies -= templeCost;
+                templeCount++;
+                cookieProduction += 7800; // Temples produce cookies
+                updateDisplay();
+            }
+        });
+
+        document.getElementById("upgradeEfficiency").addEventListener("click", () => {
+            if (cookies >= upgradeCost) {
+                cookies -= upgradeCost;
+                cookiePerClick *= 2; // Upgrade doubles click power
+                upgradeCost *= 2; // Increase upgrade cost
+                updateDisplay();
+            }
+        });
+
+        document.getElementById("upgradeCursors").addEventListener("click", () => {
+            if (cookies >= cursorUpgradeCost) {
+                cookies -= cursorUpgradeCost;
+                cookieProduction += 0.1; // Increase cursor production
+                cursorUpgradeCost *= 2; // Increase upgrade cost
+                updateDisplay();
+            }
+        });
+
+        document.getElementById("upgradeGrandmas").addEventListener("click", () => {
+            if (cookies >= grandmaUpgradeCost) {
+                cookies -= grandmaUpgradeCost;
+                cookieProduction += 1; // Increase grandma production
+                grandmaUpgradeCost *= 2; // Increase upgrade cost
+                updateDisplay();
+            }
+        });
+
+        document.getElementById("upgradeFarms").addEventListener("click", () => {
+            if (cookies >= farmUpgradeCost) {
+                cookies -= farmUpgradeCost;
+                cookieProduction += 8; // Increase farm production
+                farmUpgradeCost *= 2; // Increase upgrade cost
+                updateDisplay();
+            }
+        });
+
+        setInterval(() => {
+            cookies += cookieProduction; // Automated cookie production
+            updateDisplay();
+        }, 1000); // Produces cookies every second
+
+        document.getElementById("activateChristmas").addEventListener("click", () => {
+            alert("Christmas event activated! Enjoy special cookies!");
+            // Implement special Christmas features here
+        });
+
+        document.getElementById("activateHalloween").addEventListener("click", () => {
+            alert("Halloween event activated! Enjoy spooky cookies!");
+            // Implement special Halloween features here
+        });
+
+        // Save/Load System
+        function saveGame() {
+            const gameState = {
+                cookies, cursorCount, grandmaCount, farmCount, mineCount,
+                factoryCount, bankCount, templeCount, cookiePerClick, upgradeCost,
+                cursorUpgradeCost, grandmaUpgradeCost, farmUpgradeCost
+            };
+            localStorage.setItem("cookieClickerGame", JSON.stringify(gameState));
+            alert("Game saved!");
+        }
+
+        function loadGame() {
+            const savedState = localStorage.getItem("cookieClickerGame");
+            if (savedState) {
+                const gameState = JSON.parse(savedState);
+                cookies = gameState.cookies;
+                cursorCount = gameState.cursorCount;
+                grandmaCount = gameState.grandmaCount;
+                farmCount = gameState.farmCount;
+                mineCount = gameState.mineCount;
+                factoryCount = gameState.factoryCount;
+                bankCount = gameState.bankCount;
+                templeCount = gameState.templeCount;
+                cookiePerClick = gameState.cookiePerClick;
+                upgradeCost = gameState.upgradeCost;
+                cursorUpgradeCost = gameState.cursorUpgradeCost;
+                grandmaUpgradeCost = gameState.grandmaUpgradeCost;
+                farmUpgradeCost = gameState.farmUpgradeCost;
+                updateDisplay();
+                alert("Game loaded!");
+            }
+        }
+
+        window.onload = loadGame; // Load game on page load
+        window.onbeforeunload = saveGame; // Save game on page unload
+    </script>
 </body>
 </html>
