@@ -3,200 +3,1108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quiz Blook Game</title>
+  <title>Build Battle Expanded Prototype</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f7fb;
       margin: 0;
-      padding: 20px;
-      text-align: center;
-    }
-    .container {
-      max-width: 700px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    button {
-      margin: 8px;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 10px;
-      background: #4f46e5;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
       color: white;
-      cursor: pointer;
-      font-size: 16px;
     }
-    button:hover { background: #3730a3; }
-    .hidden { display: none; }
-    .token, .blook {
-      display: inline-block;
-      margin: 8px;
-      padding: 10px;
-      border-radius: 12px;
-      background: #e0e7ff;
+
+    canvas {
+      display: block;
+      background: linear-gradient(#7dd3fc, #dbeafe 60%, #86efac 60%, #4ade80 100%);
     }
-    .shop-item {
-      background: #fef3c7;
-      margin: 10px;
+
+    #hud {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 12px 14px;
+      width: 360px;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+
+    #hud h1 {
+      margin: 0 0 8px 0;
+      font-size: 18px;
+    }
+
+    #hud p {
+      margin: 4px 0;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .accent {
+      color: #facc15;
+      font-weight: bold;
+    }
+
+    #message {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 10;
+      min-width: 220px;
+      max-width: 360px;
       padding: 12px;
       border-radius: 12px;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 13px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Quiz Blook Game</h1>
-    <p><strong>Tokens:</strong> <span id="tokens">0</span></p>
-    <p><strong>Game Mode:</strong> <span id="modeLabel">Classic</span></p>
-
-    <div id="menu">
-      <button onclick="setMode('Classic')">Classic Mode</button>
-      <button onclick="setMode('Speed')">Speed Mode</button>
-      <button onclick="startGame()">Start Game</button>
-      <button onclick="showMarketplace()">Marketplace</button>
-    </div>
-
-    <div id="game" class="hidden">
-      <h2 id="question"></h2>
-      <div id="answers"></div>
-      <p id="result"></p>
-      <button onclick="nextQuestion()">Next Question</button>
-      <button onclick="goMenu()">Back to Menu</button>
-    </div>
-
-    <div id="marketplace" class="hidden">
-      <h2>Marketplace</h2>
-      <div class="shop-item">
-        <p><strong>Common Pack</strong> - 20 Tokens</p>
-        <button onclick="buyPack('Common Pack', 20)">Buy</button>
-      </div>
-      <div class="shop-item">
-        <p><strong>Rare Pack</strong> - 50 Tokens</p>
-        <button onclick="buyPack('Rare Pack', 50)">Buy</button>
-      </div>
-      <h3>Your Blooks</h3>
-      <div id="blooks"></div>
-      <button onclick="goMenu()">Back to Menu</button>
-    </div>
+  <div id="hud">
+    <h1>Build Battle Expanded</h1>
+    <p>Move: <span class="accent">A/D</span> | Jump: <span class="accent">W</span> | Slide: <span class="accent">Shift</span></p>
+    <p>Builds: <span class="accent">1</span> Wall, <span class="accent">2</span> Ramp, <span class="accent">3</span> Floor, <span class="accent">4</span> Cone</p>
+    <p>Edit: <span class="accent">E</span> | Repair: <span class="accent">R</span> | Rotate Ramp: <span class="accent">Q</span></p>
+    <p>Shoot: <span class="accent">Space</span> | Weapon: <span class="accent">Z/X</span> | Reload: <span class="accent">C</span></p>
+    <p>Practice ideas: build for high ground, place cones to block, edit windows/doors, and use unpredictable movement.</p>
   </div>
 
-  <script>
-    let tokens = 0;
-    let mode = 'Classic';
-    let currentQuestion = 0;
-    let ownedBlooks = [];
+  <div id="message">Loading arena...</div>
+  <canvas id="game"></canvas>
 
-    const questions = [
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const messageBox = document.getElementById('message');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const state = {
+      running: true,
+      round: 1,
+      maxRounds: 10,
+      winner: null,
+      mode: 'Practice Duel',
+      selectedBuild: 'wall',
+      selectedWeaponIndex: 0,
+      mouse: { x: 0, y: 0 },
+      keys: {},
+      gravity: 0.6,
+      friction: 0.86,
+      worldWidth: 2600,
+      cameraX: 0,
+      time: 0,
+      rampDirection: 1,
+      buildCooldown: 0,
+      shootCooldown: 0,
+      tips: [
+        'Use cones to block enemy routes.',
+        'Practice triple edits slowly first.',
+        'Take high ground whenever possible.',
+        'Mix jumping and sliding to stay unpredictable.',
+        'Build before shooting if you are exposed.'
+      ],
+      tipIndex: 0
+    };
+
+    const colors = {
+      wall: '#60a5fa',
+      wallEdited: '#93c5fd',
+      floor: '#4ade80',
+      floorEdited: '#86efac',
+      ramp: '#f59e0b',
+      rampEdited: '#fde68a',
+      cone: '#f472b6',
+      coneEdited: '#f9a8d4'
+    };
+
+    function setMessage(text) {
+      messageBox.textContent = text;
+    }
+
+    function groundY() {
+      return canvas.height - 90;
+    }
+
+    function snap(v, size = 40) {
+      return Math.floor(v / size) * size;
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function dist(ax, ay, bx, by) {
+      return Math.hypot(ax - bx, ay - by);
+    }
+
+    function rectsCollide(a, b) {
+      return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    }
+
+    function pointInRect(px, py, r) {
+      return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+    }
+
+    const weapons = [
       {
-        q: 'What is 2 + 2?',
-        answers: ['3', '4', '5', '6'],
-        correct: '4'
+        name: 'Rifle',
+        damage: 14,
+        speed: 12,
+        fireDelay: 12,
+        spread: 0.03,
+        ammo: 30,
+        magSize: 30,
+        reloadTime: 90,
+        color: '#ffffff'
       },
       {
-        q: 'What color is the sky?',
-        answers: ['Blue', 'Green', 'Red', 'Yellow'],
-        correct: 'Blue'
+        name: 'Shotgun',
+        damage: 8,
+        pellets: 6,
+        speed: 10,
+        fireDelay: 34,
+        spread: 0.24,
+        ammo: 6,
+        magSize: 6,
+        reloadTime: 80,
+        color: '#fca5a5'
       },
       {
-        q: 'Which planet is known as the Red Planet?',
-        answers: ['Earth', 'Mars', 'Venus', 'Jupiter'],
-        correct: 'Mars'
+        name: 'SMG',
+        damage: 7,
+        speed: 13,
+        fireDelay: 6,
+        spread: 0.06,
+        ammo: 24,
+        magSize: 24,
+        reloadTime: 70,
+        color: '#a7f3d0'
       }
     ];
 
-    const packRewards = {
-      'Common Pack': ['Cat Blook', 'Dog Blook', 'Fish Blook'],
-      'Rare Pack': ['Dragon Blook', 'Galaxy Blook', 'Phoenix Blook']
+    function cloneWeapons() {
+      return weapons.map(w => ({ ...w }));
+    }
+
+    const player = {
+      x: 180,
+      y: groundY() - 60,
+      w: 34,
+      h: 60,
+      vx: 0,
+      vy: 0,
+      speed: 4.5,
+      jumpPower: -12,
+      onGround: false,
+      sliding: false,
+      facing: 1,
+      hp: 100,
+      shield: 50,
+      maxHp: 100,
+      maxShield: 50,
+      materials: 600,
+      buildsPlaced: 0,
+      editsMade: 0,
+      reloadTimer: 0,
+      weapons: cloneWeapons(),
+      eliminations: 0,
+      deaths: 0,
+      practiceScore: 0
     };
 
-    function updateDisplay() {
-      document.getElementById('tokens').textContent = tokens;
-      document.getElementById('modeLabel').textContent = mode;
-      const blooksDiv = document.getElementById('blooks');
-      blooksDiv.innerHTML = ownedBlooks.length
-        ? ownedBlooks.map(b => `<div class="blook">${b}</div>`).join('')
-        : '<p>No blooks yet.</p>';
+    const bot = {
+      x: 1100,
+      y: groundY() - 60,
+      w: 34,
+      h: 60,
+      vx: 0,
+      vy: 0,
+      speed: 3.7,
+      jumpPower: -11,
+      onGround: false,
+      sliding: false,
+      facing: -1,
+      hp: 100,
+      shield: 50,
+      maxHp: 100,
+      maxShield: 50,
+      materials: 999,
+      reloadTimer: 0,
+      weapons: cloneWeapons(),
+      selectedWeaponIndex: 0,
+      aiTimer: 0,
+      jumpTimer: 0,
+      buildTimer: 0,
+      shootTimer: 0,
+      editTimer: 0,
+      strafeDir: 1,
+      phase: 'approach'
+    };
+
+    const builds = [];
+    const bullets = [];
+    const particles = [];
+    const pickups = [];
+    const props = [];
+
+    function createArenaProps() {
+      props.length = 0;
+      pickups.length = 0;
+
+      for (let i = 0; i < 18; i++) {
+        props.push({
+          x: 220 + i * 120,
+          y: groundY() - rand(20, 80),
+          w: rand(30, 70),
+          h: rand(20, 100),
+          type: i % 2 === 0 ? 'rock' : 'crate'
+        });
+      }
+
+      for (let i = 0; i < 8; i++) {
+        pickups.push({
+          x: 300 + i * 260,
+          y: groundY() - 24,
+          r: 12,
+          kind: i % 2 === 0 ? 'ammo' : 'shield',
+          active: true
+        });
+      }
     }
 
-    function setMode(selectedMode) {
-      mode = selectedMode;
-      updateDisplay();
+    createArenaProps();
+
+    function getCurrentWeapon(entity, isBot = false) {
+      const index = isBot ? entity.selectedWeaponIndex : state.selectedWeaponIndex;
+      return entity.weapons[index];
     }
 
-    function startGame() {
-      currentQuestion = 0;
-      document.getElementById('menu').classList.add('hidden');
-      document.getElementById('marketplace').classList.add('hidden');
-      document.getElementById('game').classList.remove('hidden');
-      loadQuestion();
+    function screenX(worldX) {
+      return worldX - state.cameraX;
     }
 
-    function loadQuestion() {
-      const q = questions[currentQuestion];
-      document.getElementById('question').textContent = q.q;
-      document.getElementById('result').textContent = '';
-      const answersDiv = document.getElementById('answers');
-      answersDiv.innerHTML = '';
-      q.answers.forEach(answer => {
-        const btn = document.createElement('button');
-        btn.textContent = answer;
-        btn.onclick = () => checkAnswer(answer);
-        answersDiv.appendChild(btn);
+    document.addEventListener('keydown', e => {
+      state.keys[e.key.toLowerCase()] = true;
+
+      if (e.key === '1') state.selectedBuild = 'wall';
+      if (e.key === '2') state.selectedBuild = 'ramp';
+      if (e.key === '3') state.selectedBuild = 'floor';
+      if (e.key === '4') state.selectedBuild = 'cone';
+      if (e.key.toLowerCase() === 'e') editNearestBuild(player);
+      if (e.key.toLowerCase() === 'r') repairNearestBuild(player);
+      if (e.key.toLowerCase() === 'q') state.rampDirection *= -1;
+      if (e.key.toLowerCase() === 'z') cycleWeapon(-1);
+      if (e.key.toLowerCase() === 'x') cycleWeapon(1);
+      if (e.key.toLowerCase() === 'c') startReload(player, false);
+      if (e.code === 'Space') fireWeapon(player, false);
+
+      if (e.key.toLowerCase() === 'p') {
+        state.running = !state.running;
+        setMessage(state.running ? 'Resumed.' : 'Paused. Press P to resume.');
+      }
+    });
+
+    document.addEventListener('keyup', e => {
+      state.keys[e.key.toLowerCase()] = false;
+    });
+
+    document.addEventListener('mousemove', e => {
+      state.mouse.x = e.clientX;
+      state.mouse.y = e.clientY;
+    });
+
+    document.addEventListener('mousedown', e => {
+      if (e.button === 0) {
+        placeBuildAtMouse();
+      }
+      if (e.button === 2) {
+        fireWeapon(player, false);
+      }
+    });
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    function cycleWeapon(dir) {
+      state.selectedWeaponIndex += dir;
+      if (state.selectedWeaponIndex < 0) state.selectedWeaponIndex = player.weapons.length - 1;
+      if (state.selectedWeaponIndex >= player.weapons.length) state.selectedWeaponIndex = 0;
+      const weapon = getCurrentWeapon(player, false);
+      setMessage(`Selected ${weapon.name}.`);
+    }
+
+    function startReload(entity, isBot) {
+      const weapon = getCurrentWeapon(entity, isBot);
+      if (entity.reloadTimer > 0) return;
+      if (weapon.ammo >= weapon.magSize) return;
+      entity.reloadTimer = weapon.reloadTime;
+      if (!isBot) setMessage(`Reloading ${weapon.name}...`);
+    }
+
+    function completeReload(entity, isBot) {
+      const weapon = getCurrentWeapon(entity, isBot);
+      weapon.ammo = weapon.magSize;
+      if (!isBot) setMessage(`${weapon.name} reloaded.`);
+    }
+
+    function spawnParticles(x, y, color, count = 10, force = 3) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x,
+          y,
+          vx: rand(-force, force),
+          vy: rand(-force, force),
+          life: rand(20, 40),
+          color,
+          size: rand(2, 5)
+        });
+      }
+    }
+
+    function applyDamage(target, amount) {
+      let remaining = amount;
+
+      if (target.shield > 0) {
+        const shieldDamage = Math.min(target.shield, remaining);
+        target.shield -= shieldDamage;
+        remaining -= shieldDamage;
+      }
+
+      if (remaining > 0) {
+        target.hp -= remaining;
+      }
+    }
+
+    function entityRect(entity) {
+      return {
+        x: entity.x,
+        y: entity.y,
+        w: entity.w,
+        h: entity.h
+      };
+    }
+
+    function placeBuildAtMouse() {
+      if (state.buildCooldown > 0) return;
+      if (player.materials < 10) {
+        setMessage('Not enough materials.');
+        return;
+      }
+
+      const worldMouseX = state.mouse.x + state.cameraX;
+      const gx = snap(worldMouseX);
+      const gy = snap(state.mouse.y);
+
+      const newBuild = {
+        x: gx,
+        y: gy,
+        type: state.selectedBuild,
+        edited: false,
+        hp: 120,
+        maxHp: 120,
+        owner: 'player',
+        direction: state.rampDirection,
+        flash: 8
+      };
+
+      builds.push(newBuild);
+      player.materials -= 10;
+      player.buildsPlaced += 1;
+      state.buildCooldown = 8;
+      spawnParticles(gx - state.cameraX + 20, gy, '#ffffff', 8, 2);
+      setMessage(`Placed ${state.selectedBuild}.`);
+    }
+
+    function buildToRect(build) {
+      if (build.type === 'wall') {
+        return { x: build.x, y: build.y - 40, w: 40, h: 80 };
+      }
+      if (build.type === 'floor') {
+        return { x: build.x, y: build.y, w: 60, h: 16 };
+      }
+      if (build.type === 'cone') {
+        return { x: build.x, y: build.y, w: 40, h: 30 };
+      }
+      return { x: build.x, y: build.y - 40, w: 50, h: 40 };
+    }
+
+    function findNearestBuild(entity, range = 130) {
+      let nearest = null;
+      let best = Infinity;
+
+      for (const build of builds) {
+        const rect = buildToRect(build);
+        const cx = rect.x + rect.w / 2;
+        const cy = rect.y + rect.h / 2;
+        const d = dist(entity.x + entity.w / 2, entity.y + entity.h / 2, cx, cy);
+        if (d < best && d < range) {
+          best = d;
+          nearest = build;
+        }
+      }
+
+      return nearest;
+    }
+
+    function editNearestBuild(entity) {
+      const build = findNearestBuild(entity);
+      if (!build) {
+        setMessage('No nearby build to edit.');
+        return;
+      }
+
+      build.edited = !build.edited;
+      build.flash = 10;
+      player.editsMade += 1;
+      player.practiceScore += 5;
+      setMessage(`${build.type} edited.`);
+    }
+
+    function repairNearestBuild(entity) {
+      const build = findNearestBuild(entity);
+      if (!build) {
+        setMessage('No nearby build to repair.');
+        return;
+      }
+
+      if (player.materials < 5) {
+        setMessage('Not enough materials to repair.');
+        return;
+      }
+
+      build.hp = Math.min(build.maxHp, build.hp + 40);
+      build.flash = 10;
+      player.materials -= 5;
+      setMessage(`${build.type} repaired.`);
+    }
+
+    function fireWeapon(entity, isBot) {
+      if (!state.running) return;
+      if (!isBot && state.shootCooldown > 0) return;
+
+      const weapon = getCurrentWeapon(entity, isBot);
+      if (entity.reloadTimer > 0) return;
+
+      if (weapon.ammo <= 0) {
+        startReload(entity, isBot);
+        return;
+      }
+
+      weapon.ammo -= 1;
+      const pellets = weapon.pellets || 1;
+
+      for (let i = 0; i < pellets; i++) {
+        const originX = entity.x + entity.w / 2;
+        const originY = entity.y + entity.h / 2;
+        let angle;
+
+        if (isBot) {
+          const targetX = player.x + player.w / 2 + rand(-20, 20);
+          const targetY = player.y + player.h / 2 + rand(-20, 20);
+          angle = Math.atan2(targetY - originY, targetX - originX);
+        } else {
+          const targetX = state.mouse.x + state.cameraX;
+          const targetY = state.mouse.y;
+          angle = Math.atan2(targetY - originY, targetX - originX);
+        }
+
+        angle += rand(-weapon.spread, weapon.spread);
+
+        bullets.push({
+          x: originX,
+          y: originY,
+          vx: Math.cos(angle) * weapon.speed,
+          vy: Math.sin(angle) * weapon.speed,
+          life: 90,
+          owner: isBot ? 'bot' : 'player',
+          damage: weapon.damage,
+          color: weapon.color,
+          size: weapon.name === 'Shotgun' ? 4 : 3
+        });
+      }
+
+      if (!isBot) {
+        state.shootCooldown = weapon.fireDelay;
+        setMessage(`${weapon.name} fired. Ammo: ${weapon.ammo}/${weapon.magSize}`);
+      }
+    }
+
+    function updateReload(entity, isBot) {
+      if (entity.reloadTimer > 0) {
+        entity.reloadTimer -= 1;
+        if (entity.reloadTimer <= 0) {
+          completeReload(entity, isBot);
+        }
+      }
+    }
+
+    function resolveEntityMovement(entity, allowInput = false) {
+      if (allowInput) {
+        entity.sliding = false;
+        let move = 0;
+
+        if (state.keys['a']) move -= 1;
+        if (state.keys['d']) move += 1;
+
+        entity.vx = move * entity.speed;
+
+        if (move !== 0) {
+          entity.facing = move;
+        }
+
+        if (state.keys['shift'] && entity.onGround && move !== 0) {
+          entity.vx *= 1.8;
+          entity.sliding = true;
+        }
+
+        if (state.keys['w'] && entity.onGround) {
+          entity.vy = entity.jumpPower;
+          entity.onGround = false;
+        }
+      }
+
+      entity.vy += state.gravity;
+      entity.x += entity.vx;
+      entity.y += entity.vy;
+      entity.onGround = false;
+
+      if (entity.y + entity.h >= groundY()) {
+        entity.y = groundY() - entity.h;
+        entity.vy = 0;
+        entity.onGround = true;
+      }
+
+      for (const prop of props) {
+        const rect = { x: prop.x, y: prop.y, w: prop.w, h: prop.h };
+        const er = entityRect(entity);
+        if (rectsCollide(er, rect)) {
+          if (entity.vy >= 0 && entity.y + entity.h - entity.vy <= rect.y + 12) {
+            entity.y = rect.y - entity.h;
+            entity.vy = 0;
+            entity.onGround = true;
+          }
+        }
+      }
+
+      for (const build of builds) {
+        const rect = buildToRect(build);
+        const er = entityRect(entity);
+        if (rectsCollide(er, rect)) {
+          if (entity.vy >= 0 && entity.y + entity.h - entity.vy <= rect.y + 12) {
+            entity.y = rect.y - entity.h;
+            entity.vy = 0;
+            entity.onGround = true;
+          }
+        }
+      }
+
+      entity.x = clamp(entity.x, 0, state.worldWidth - entity.w);
+    }
+
+    function updatePlayer() {
+      resolveEntityMovement(player, true);
+      updateReload(player, false);
+
+      for (const pickup of pickups) {
+        if (!pickup.active) continue;
+        if (dist(player.x + player.w / 2, player.y + player.h / 2, pickup.x, pickup.y) < 30) {
+          pickup.active = false;
+          if (pickup.kind === 'ammo') {
+            for (const weapon of player.weapons) {
+              weapon.ammo = weapon.magSize;
+            }
+            setMessage('Picked up ammo refill.');
+          } else {
+            player.shield = Math.min(player.maxShield, player.shield + 20);
+            setMessage('Picked up shield.');
+          }
+          spawnParticles(screenX(pickup.x), pickup.y, pickup.kind === 'ammo' ? '#fef08a' : '#93c5fd', 14, 3);
+        }
+      }
+
+      state.cameraX = clamp(player.x - canvas.width * 0.35, 0, state.worldWidth - canvas.width);
+    }
+
+    function botPlaceBuild(type) {
+      if (bot.materials < 10) return;
+
+      const bx = snap(bot.x + (bot.facing > 0 ? 40 : -10));
+      const by = snap(bot.y + 55);
+
+      builds.push({
+        x: bx,
+        y: by,
+        type,
+        edited: false,
+        hp: 120,
+        maxHp: 120,
+        owner: 'bot',
+        direction: bot.facing,
+        flash: 8
       });
+
+      bot.materials -= 10;
     }
 
-    function checkAnswer(answer) {
-      const q = questions[currentQuestion];
-      if (answer === q.correct) {
-        let reward = mode === 'Speed' ? 15 : 10;
-        tokens += reward;
-        document.getElementById('result').textContent = `Correct! You earned ${reward} tokens.`;
+    function updateBot() {
+      bot.aiTimer += 1;
+      bot.jumpTimer += 1;
+      bot.buildTimer += 1;
+      bot.shootTimer += 1;
+      bot.editTimer += 1;
+
+      const dx = player.x - bot.x;
+      bot.facing = dx >= 0 ? 1 : -1;
+
+      if (Math.abs(dx) > 260) {
+        bot.phase = 'approach';
+      } else if (Math.abs(dx) < 130) {
+        bot.phase = 'pressure';
       } else {
-        document.getElementById('result').textContent = 'Wrong answer!';
+        bot.phase = 'strafe';
       }
-      updateDisplay();
-    }
 
-    function nextQuestion() {
-      currentQuestion++;
-      if (currentQuestion >= questions.length) {
-        document.getElementById('result').textContent = 'Game over!';
-        return;
+      if (bot.phase === 'approach') {
+        bot.vx = bot.facing * bot.speed;
+      } else if (bot.phase === 'pressure') {
+        bot.vx = -bot.facing * 2.4;
+        if (bot.buildTimer > 50) {
+          botPlaceBuild('wall');
+          botPlaceBuild('cone');
+          bot.buildTimer = 0;
+        }
+      } else {
+        if (bot.aiTimer % 50 === 0) bot.strafeDir *= -1;
+        bot.vx = bot.strafeDir * 2.7;
       }
-      loadQuestion();
-    }
 
-    function showMarketplace() {
-      document.getElementById('menu').classList.add('hidden');
-      document.getElementById('game').classList.add('hidden');
-      document.getElementById('marketplace').classList.remove('hidden');
-      updateDisplay();
-    }
-
-    function buyPack(packName, cost) {
-      if (tokens < cost) {
-        alert('Not enough tokens!');
-        return;
+      if (bot.jumpTimer > 85 && bot.onGround) {
+        bot.vy = bot.jumpPower;
+        bot.onGround = false;
+        bot.jumpTimer = 0;
       }
-      tokens -= cost;
-      const rewards = packRewards[packName];
-      const randomBlook = rewards[Math.floor(Math.random() * rewards.length)];
-      ownedBlooks.push(randomBlook);
-      alert(`You got: ${randomBlook}!`);
-      updateDisplay();
+
+      if (Math.abs(dx) < 420 && bot.shootTimer > 22) {
+        if (Math.random() < 0.7) fireWeapon(bot, true);
+        bot.shootTimer = 0;
+      }
+
+      if (Math.abs(dx) < 260 && bot.buildTimer > 80) {
+        botPlaceBuild(Math.random() > 0.5 ? 'ramp' : 'wall');
+        bot.buildTimer = 0;
+      }
+
+      if (bot.editTimer > 140) {
+        const near = findNearestBuild(bot, 110);
+        if (near && Math.random() < 0.5) {
+          near.edited = !near.edited;
+          near.flash = 10;
+        }
+        bot.editTimer = 0;
+      }
+
+      const botWeapon = getCurrentWeapon(bot, true);
+      if (botWeapon.ammo <= 0) {
+        startReload(bot, true);
+      }
+
+      updateReload(bot, true);
+      resolveEntityMovement(bot, false);
     }
 
-    function goMenu() {
-      document.getElementById('menu').classList.remove('hidden');
-      document.getElementById('game').classList.add('hidden');
-      document.getElementById('marketplace').classList.add('hidden');
+    function updateBullets() {
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const bullet = bullets[i];
+        bullet.x += bullet.vx;
+        bullet.y += bullet.vy;
+        bullet.life -= 1;
+
+        let removed = false;
+
+        for (let j = builds.length - 1; j >= 0; j--) {
+          const build = builds[j];
+          const rect = buildToRect(build);
+          if (pointInRect(bullet.x, bullet.y, rect)) {
+            build.hp -= bullet.damage;
+            build.flash = 5;
+            spawnParticles(screenX(bullet.x), bullet.y, '#ffffff', 6, 2);
+            bullets.splice(i, 1);
+            removed = true;
+            if (build.hp <= 0) {
+              spawnParticles(screenX(rect.x + rect.w / 2), rect.y + rect.h / 2, '#fca5a5', 16, 4);
+              builds.splice(j, 1);
+            }
+            break;
+          }
+        }
+
+        if (removed) continue;
+
+        const target = bullet.owner === 'player' ? bot : player;
+        if (pointInRect(bullet.x, bullet.y, entityRect(target))) {
+          applyDamage(target, bullet.damage);
+          spawnParticles(screenX(bullet.x), bullet.y, bullet.owner === 'player' ? '#f87171' : '#93c5fd', 10, 3);
+          bullets.splice(i, 1);
+          removed = true;
+
+          if (bullet.owner === 'player') {
+            player.practiceScore += 10;
+          }
+        }
+
+        if (removed) continue;
+
+        if (bullet.life <= 0 || bullet.x < 0 || bullet.x > state.worldWidth || bullet.y < 0 || bullet.y > canvas.height) {
+          bullets.splice(i, 1);
+        }
+      }
     }
 
-    updateDisplay();
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.08;
+        p.life -= 1;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function updateBuilds() {
+      for (const build of builds) {
+        if (build.flash > 0) build.flash -= 1;
+      }
+    }
+
+    function checkRoundEnd() {
+      if (player.hp <= 0 && state.winner === null) {
+        state.winner = 'Bot';
+        player.deaths += 1;
+        setMessage('Round lost. Refreshing arena...');
+        setTimeout(resetRound, 1600);
+      }
+
+      if (bot.hp <= 0 && state.winner === null) {
+        state.winner = 'Player';
+        player.eliminations += 1;
+        player.practiceScore += 100;
+        setMessage('Round won. Refreshing arena...');
+        setTimeout(resetRound, 1600);
+      }
+    }
+
+    function resetRound() {
+      state.round += 1;
+      state.winner = null;
+      builds.length = 0;
+      bullets.length = 0;
+      particles.length = 0;
+      createArenaProps();
+
+      player.x = 180;
+      player.y = groundY() - 60;
+      player.vx = 0;
+      player.vy = 0;
+      player.hp = player.maxHp;
+      player.shield = player.maxShield;
+      player.materials = 600;
+      player.reloadTimer = 0;
+      player.weapons = cloneWeapons();
+
+      bot.x = 1100;
+      bot.y = groundY() - 60;
+      bot.vx = 0;
+      bot.vy = 0;
+      bot.hp = bot.maxHp;
+      bot.shield = bot.maxShield;
+      bot.materials = 999;
+      bot.reloadTimer = 0;
+      bot.weapons = cloneWeapons();
+      bot.selectedWeaponIndex = Math.floor(Math.random() * bot.weapons.length);
+
+      setMessage(`Round ${state.round} started.`);
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = '#fde68a';
+      ctx.beginPath();
+      ctx.arc(screenX(2000), 120, 50, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      for (let i = 0; i < 8; i++) {
+        const x = screenX(i * 350 + (state.time * 0.1) % 200);
+        const y = 70 + (i % 3) * 30;
+        ctx.beginPath();
+        ctx.arc(x, y, 18, 0, Math.PI * 2);
+        ctx.arc(x + 20, y + 4, 14, 0, Math.PI * 2);
+        ctx.arc(x - 16, y + 6, 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawGround() {
+      ctx.fillStyle = '#3f6212';
+      ctx.fillRect(0, groundY(), canvas.width, canvas.height - groundY());
+
+      ctx.fillStyle = '#65a30d';
+      for (let x = -40; x < canvas.width + 40; x += 30) {
+        ctx.fillRect(x, groundY(), 18, 8);
+      }
+    }
+
+    function drawProp(prop) {
+      const x = screenX(prop.x);
+      const y = prop.y;
+
+      if (prop.type === 'rock') {
+        ctx.fillStyle = '#6b7280';
+        ctx.beginPath();
+        ctx.ellipse(x + prop.w / 2, y + prop.h / 2, prop.w / 2, prop.h / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(x, y, prop.w, prop.h);
+        ctx.strokeStyle = '#fbbf24';
+        ctx.strokeRect(x, y, prop.w, prop.h);
+      }
+    }
+
+    function drawPickup(pickup) {
+      if (!pickup.active) return;
+      const x = screenX(pickup.x);
+      const y = pickup.y;
+      ctx.fillStyle = pickup.kind === 'ammo' ? '#fef08a' : '#93c5fd';
+      ctx.beginPath();
+      ctx.arc(x, y, pickup.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#111827';
+      ctx.font = '10px Arial';
+      ctx.fillText(pickup.kind === 'ammo' ? 'A' : 'S', x - 4, y + 3);
+    }
+
+    function drawBuild(build) {
+      const rect = buildToRect(build);
+      const x = screenX(build.x);
+      const y = build.y;
+      const flashAlpha = build.flash > 0 ? 0.22 : 0;
+
+      ctx.save();
+      ctx.globalAlpha = 1;
+
+      if (build.type === 'wall') {
+        ctx.fillStyle = build.edited ? colors.wallEdited : colors.wall;
+        ctx.fillRect(x, y - 40, 40, 80);
+        if (build.edited) {
+          ctx.fillStyle = '#1e3a8a';
+          ctx.fillRect(x + 10, y - 10, 20, 30);
+        }
+      }
+
+      if (build.type === 'floor') {
+        ctx.fillStyle = build.edited ? colors.floorEdited : colors.floor;
+        ctx.fillRect(x, y, 60, 16);
+      }
+
+      if (build.type === 'cone') {
+        ctx.fillStyle = build.edited ? colors.coneEdited : colors.cone;
+        ctx.beginPath();
+        ctx.moveTo(x + 20, y - 10);
+        ctx.lineTo(x, y + 25);
+        ctx.lineTo(x + 40, y + 25);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      if (build.type === 'ramp') {
+        ctx.fillStyle = build.edited ? colors.rampEdited : colors.ramp;
+        ctx.beginPath();
+        if (build.direction >= 0) {
+          ctx.moveTo(x, y + 10);
+          ctx.lineTo(x + 50, y + 10);
+          ctx.lineTo(x + 50, y - 30);
+        } else {
+          ctx.moveTo(x, y - 30);
+          ctx.lineTo(x, y + 10);
+          ctx.lineTo(x + 50, y + 10);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`;
+      ctx.fillRect(rect.x - state.cameraX, rect.y, rect.w, rect.h);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(rect.x - state.cameraX, rect.y - 8, rect.w, 5);
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(rect.x - state.cameraX, rect.y - 8, rect.w * (build.hp / build.maxHp), 5);
+
+      ctx.restore();
+    }
+
+    function drawEntity(entity, color, label) {
+      const x = screenX(entity.x);
+      const y = entity.y;
+
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, entity.w, entity.h);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + 8, y + 12, 6, 6);
+      ctx.fillRect(x + 20, y + 12, 6, 6);
+
+      if (entity.sliding) {
+        ctx.fillStyle = 'rgba(34,211,238,0.35)';
+        ctx.fillRect(x - 6, y + entity.h - 10, entity.w + 12, 12);
+      }
+
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(x - 2, y - 18, entity.w + 4, 6);
+      ctx.fillStyle = '#60a5fa';
+      ctx.fillRect(x - 2, y - 18, (entity.w + 4) * (entity.shield / entity.maxShield), 6);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(x - 2, y - 10, (entity.w + 4) * (entity.hp / entity.maxHp), 6);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '12px Arial';
+      ctx.fillText(label, x - 2, y - 24);
+    }
+
+    function drawBullets() {
+      for (const bullet of bullets) {
+        ctx.fillStyle = bullet.color;
+        ctx.beginPath();
+        ctx.arc(screenX(bullet.x), bullet.y, bullet.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawParticles() {
+      for (const p of particles) {
+        ctx.globalAlpha = Math.max(0, p.life / 40);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawCrosshair() {
+      const x = state.mouse.x;
+      const y = state.mouse.y;
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - 8, y);
+      ctx.lineTo(x + 8, y);
+      ctx.moveTo(x, y - 8);
+      ctx.lineTo(x, y + 8);
+      ctx.stroke();
+    }
+
+    function drawHUDOverlay() {
+      const weapon = getCurrentWeapon(player, false);
+      const lines = [
+        `Round: ${state.round}`,
+        `Mode: ${state.mode}`,
+        `HP: ${Math.max(0, Math.floor(player.hp))} | Shield: ${Math.max(0, Math.floor(player.shield))}`,
+        `Materials: ${player.materials}`,
+        `Weapon: ${weapon.name} (${weapon.ammo}/${weapon.magSize})`,
+        `Build: ${state.selectedBuild}`,
+        `Builds: ${player.buildsPlaced} | Edits: ${player.editsMade}`,
+        `Elims: ${player.eliminations} | Deaths: ${player.deaths}`,
+        `Practice Score: ${player.practiceScore}`,
+        `Tip: ${state.tips[state.tipIndex]}`
+      ];
+
+      ctx.fillStyle = 'rgba(15,23,42,0.72)';
+      ctx.fillRect(14, canvas.height - 196, 340, 176);
+      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+      ctx.strokeRect(14, canvas.height - 196, 340, 176);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '14px Arial';
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], 28, canvas.height - 168 + i * 16);
+      }
+    }
+
+    function drawWinnerBanner() {
+      if (!state.winner) return;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '42px Arial';
+      ctx.fillText(`${state.winner} wins the round`, canvas.width / 2 - 170, canvas.height / 2);
+    }
+
+    function updateTimers() {
+      if (state.buildCooldown > 0) state.buildCooldown -= 1;
+      if (state.shootCooldown > 0) state.shootCooldown -= 1;
+      state.time += 1;
+      if (state.time % 240 === 0) {
+        state.tipIndex = (state.tipIndex + 1) % state.tips.length;
+      }
+    }
+
+    function gameTick() {
+      if (!state.running) return;
+      if (state.winner) return;
+
+      updateTimers();
+      updatePlayer();
+      updateBot();
+      updateBullets();
+      updateParticles();
+      updateBuilds();
+      checkRoundEnd();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBackground();
+      drawGround();
+
+      for (const prop of props) drawProp(prop);
+      for (const pickup of pickups) drawPickup(pickup);
+      for (const build of builds) drawBuild(build);
+
+      drawBullets();
+      drawEntity(player, player.sliding ? '#22d3ee' : '#2563eb', 'You');
+      drawEntity(bot, '#dc2626', 'Bot');
+      drawParticles();
+      drawCrosshair();
+      drawHUDOverlay();
+      drawWinnerBanner();
+    }
+
+    function loop() {
+      gameTick();
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    setMessage('Arena ready. Build, edit, shoot, and practice movement.');
+    loop();
   </script>
 </body>
 </html>
