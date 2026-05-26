@@ -1,39 +1,723 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diddy Clicking Game</title>
-    <style>
-        #diddy {
-            position: relative;
-            cursor: pointer;
-            width: 300px; /* Adjust size as needed */
-        }
-        .emoji {
-            position: absolute;
-            width: 50px; /* Adjust emoji size as needed */
-            height: 50px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>Retro-Style Football – Coins & Packs</title>
+  <style>
+    body { margin: 0; background: #062b3d; color: white; font-family: sans-serif; }
+    #gameCanvas { background: #0b5b2f; display: block; margin: 0 auto; }
+  </style>
 </head>
 <body>
-    <h1>Baby Oil: <span id="count">0</span></h1>
-    <img id="diddy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASAAAACvCAMAAABqzPMLAAAAyVBMVEU9RU03TFIpYGAebWoVenMMh3wHjYAEkYMBlYYwVlkbcm4KiX0Al4g5SVAhamgKin44S1EebmsEkYQ5SlE8RU0lZGMAlocbc24kZWQuWVw1T1U4S1I7R087Rk41T1QtWVslZWQZdG8IjIAOhHoBlocSfnYoYWE0UFUiaGcRgHc1TlMuWFoFj4MccW0YdnEuWFsWeHE2T1Q2TlMadG48Rk4ac24QgHgyU1cMhnwbcm0Ck4YrXF4HjoExVVg3TVIhamc0UVYebmoClIaKpH16AAADA0lEQVR4AezBOQGAABAAIL2/f2JDuAIPAAAAAAAAAAAAAAAAAAAA8N8bWT17t9OV8bFvF4mNA1EURZ9Ztq9JLTPEDGFm3v+iehYGVQ31c5ZwE/N/Kf15o1gq80G5VJRtLyrVGl+qVSv6U2+EfCts/JNtUTMEAFq5dqfb6w+G9dHWeDJ9SdSMZNhoBgDzxbKid1brTQsAZtsya2cXgGAvpS/09gMAdg9k1DgAaB0e6RvHJwFAMJZFp2cAnF/oB6tLANqnBvssAMhE+tHgCoCFvUJnANdp/eomBDiTMWOA2zv9btkCYCxTdgLg9j5+H4IDGTLaBa5j//+0QmB3W2ZEM4B07D7LG4BZJCuaAJn4faQrgKaMqIfAeeTQR4NLIPwnGxpA68Klj7QKgIZMqITAoVsf6QQIK7LgAQiOHfvoOACqsqAG7Ln2kfaBmgwoAvOUcx/1WkBRyVcCFu59pA1QUvKVgaVHH62BshIvBbQqHn30CJBS0qWBS58+0hRIK+megLZXH02AjJIuC3S8+mgMZJV0OaDr1UdbQE5Jlwd6Xn00AvJKugLQ9+qjOlBQ0gXAwKuPhkBgItDQq48GJgIVgLpXH/VNPMTywMirj3pA3sTL/JZXH3VNvMxngbFXH3VMvFHMABOvPmqb+KiRBqZefZQz8WE1BbDy6VNpASkbX5itPfpoCZSNfOW68eijhZGvXItAq+feJzUHilZ+9tl37qM9oCYLqkBw7NrnyM4Ph5UQOHHso0M7Pz2rAQQrtz4XLaBh6fzlcuDSJzq3dP6iJsCVQx9lAJqydYJ3E79P2tgJnka7QBi7z92zqSPOlzPguH3ub82dAUvj+H3ubgHGMuYMILzRr9LXAG0ZHbNcDfSjKGN0zPIyh7pc6QcX52bnUC+DuuDkWN84Omy9DOpMTzL3e/pCas/6JPNl1Etrs37UO5XlYm5g1OswC2c6GXdH9eGg3+t22petv1n4/3buWAAAAABgkL/1NHYUSGIBNYXcZN7jAAAAAAAAAAAAAAAAAAAAQFWoXF28HC8fAAAAAElFTkSuQmCC" alt="Diddy" onclick="clickDiddy()">
-    <div id="emojis"></div>
-    
-    <script>
-        let babyOilCount = 0;
+<canvas id="gameCanvas" width="800" height="450"></canvas>
+<script>
+// ===== CORE SETUP =====
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-        function clickDiddy() {
-            babyOilCount++;
-            document.getElementById('count').innerText = babyOilCount;
-            const emoji = document.createElement('img');
-            emoji.src = 'data:image/jpeg;base64,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" alt="Licking Emoji" class="emoji">';
-            emoji.style.top = `${Math.random() * 100}px`;
-            emoji.style.left = `${Math.random() * 100}px`; // Randomize position
-            document.getElementById('emojis').appendChild(emoji);
+// ===== CONFIG =====
+const CONFIG = {
+  GAME_LENGTH_SECONDS: 90,
+  BASE_DEFENDER_SPEED: 140,
+  DIFFICULTY: 'NORMAL', // EASY, NORMAL, HARD
+  WIN_COINS: 10,
+  PACK_COST: 25,
+};
+
+const DIFFICULTY_SETTINGS = {
+  EASY:   { defenderSpeedMult: 0.9, reactionDelay: 0.3, intChance: 0.03 },
+  NORMAL: { defenderSpeedMult: 1.0, reactionDelay: 0.2, intChance: 0.07 },
+  HARD:   { defenderSpeedMult: 1.2, reactionDelay: 0.1, intChance: 0.12 },
+};
+
+// ===== INPUT =====
+const Keys = {};
+window.addEventListener('keydown', e => Keys[e.key.toLowerCase()] = true);
+window.addEventListener('keyup',   e => Keys[e.key.toLowerCase()] = false);
+
+// ===== BASE CLASSES =====
+class GameObject {
+  constructor(x, y, w, h, color = 'white') {
+    this.x = x; this.y = y; this.w = w; this.h = h;
+    this.vx = 0; this.vy = 0; this.color = color; this.dead = false;
+  }
+  update(dt) {}
+  draw(ctx) {
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x, this.y, this.w, this.h);
+  }
+}
+
+class Scene {
+  constructor() { this.objects = []; }
+  add(obj) { this.objects.push(obj); }
+  update(dt) {
+    for (const o of this.objects) o.update(dt);
+    this.objects = this.objects.filter(o => !o.dead);
+  }
+  draw(ctx) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const o of this.objects) o.draw(ctx);
+  }
+}
+
+const Game = {
+  currentScene: null,
+  lastTime: 0,
+  start(scene) {
+    this.currentScene = scene;
+    this.lastTime = performance.now();
+    const loop = (t) => {
+      const dt = (t - this.lastTime) / 1000;
+      this.lastTime = t;
+      if (this.currentScene) {
+        this.currentScene.update(dt);
+        this.currentScene.draw(ctx);
+      }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  },
+  switchScene(scene) {
+    this.currentScene = scene;
+  }
+};
+
+// ===== GAME OBJECTS =====
+class Player extends GameObject {
+  constructor(x, y) {
+    super(x, y, 20, 20, '#ffd700');
+    this.speed = 200;
+  }
+  update(dt) {
+    this.vx = 0; this.vy = 0;
+    if (Keys['w'] || Keys['arrowup'])    this.vy = -this.speed;
+    if (Keys['s'] || Keys['arrowdown'])  this.vy =  this.speed;
+    if (Keys['a'] || Keys['arrowleft'])  this.vx = -this.speed;
+    if (Keys['d'] || Keys['arrowright']) this.vx =  this.speed;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.x = Math.max(0, Math.min(canvas.width  - this.w, this.x));
+    this.y = Math.max(0, Math.min(canvas.height - this.h, this.y));
+  }
+}
+
+class Receiver extends GameObject {
+  constructor(x, y) {
+    super(x, y, 16, 16, '#88ccff');
+    this.route = null;
+    this.routeTime = 0;
+  }
+  setRoute(route) {
+    this.route = route;
+    this.routeTime = 0;
+    this.x = route.startX;
+    this.y = route.startY;
+  }
+  update(dt) {
+    if (!this.route) return;
+    this.routeTime += dt;
+    let t = this.routeTime;
+    let lastX = this.route.startX;
+    let lastY = this.route.startY;
+    for (const seg of this.route.segments) {
+      if (t <= seg.dur) {
+        const p = t / seg.dur;
+        this.x = lastX + seg.dx * p;
+        this.y = lastY + seg.dy * p;
+        return;
+      } else {
+        lastX += seg.dx;
+        lastY += seg.dy;
+        t -= seg.dur;
+      }
+    }
+    if (this.route.loop) {
+      this.routeTime = 0;
+      this.x = this.route.startX;
+      this.y = this.route.startY;
+    } else {
+      this.x = lastX;
+      this.y = lastY;
+    }
+  }
+}
+
+class Ball extends GameObject {
+  constructor(x, y) {
+    super(x, y, 8, 8, '#ffffff');
+    this.friction = 0.98;
+    this.inAir = false;
+  }
+  throwTo(tx, ty, power) {
+    const dx = tx - (this.x + this.w / 2);
+    const dy = ty - (this.y + this.h / 2);
+    this.vx = dx * power;
+    this.vy = dy * power;
+    this.inAir = true;
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.vx *= this.friction;
+    this.vy *= this.friction;
+  }
+}
+
+class Defender extends GameObject {
+  constructor(x, y) {
+    super(x, y, 18, 18, '#ff4444');
+    this.speed = CONFIG.BASE_DEFENDER_SPEED;
+    this.reactionTimer = 0;
+    this.target = null;
+  }
+  update(dt, target) {
+    if (GameState.paused || GameState.inSummary) return;
+    const diff = DIFFICULTY_SETTINGS[CONFIG.DIFFICULTY] || DIFFICULTY_SETTINGS.NORMAL;
+    this.reactionTimer -= dt;
+    if (this.reactionTimer <= 0) {
+      this.target = target;
+      this.reactionTimer = diff.reactionDelay;
+    }
+    if (!this.target) return;
+    const tx = this.target.x + this.target.w / 2;
+    const ty = this.target.y + this.target.h / 2;
+    const cx = this.x + this.w / 2;
+    const cy = this.y + this.h / 2;
+    let dx = tx - cx;
+    let dy = ty - cy;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len; dy /= len;
+    const speed = this.speed * diff.defenderSpeedMult;
+    this.vx = dx * speed;
+    this.vy = dy * speed;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+  }
+}
+
+// ===== FIELD RENDERING =====
+function drawField(ctx) {
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(40, 20, canvas.width - 80, canvas.height - 40);
+  const left = 40, right = canvas.width - 40;
+  const top = 20, bottom = canvas.height - 20;
+  const segments = 10;
+  const dx = (right - left) / segments;
+  ctx.setLineDash([10, 10]);
+  for (let i = 1; i < segments; i++) {
+    const x = left + i * dx;
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+// ===== ECONOMY & GAME STATE =====
+const GameState = {
+  homeScore: 0,
+  awayScore: 0,
+  timeLeft: CONFIG.GAME_LENGTH_SECONDS,
+  message: '1-3 play, WASD, click to throw',
+  paused: false,
+  inSummary: false,
+  selectedPlayIndex: 0,
+  coins: 0,
+  lastDraftedPlayer: null, // {name, stars}
+  stats: {
+    passAttempts: 0,
+    completions: 0,
+    interceptions: 0,
+    passingYards: 0,
+    touchdowns: 0,
+    tackles: 0,
+  }
+};
+
+function resetStats() {
+  GameState.stats = {
+    passAttempts: 0,
+    completions: 0,
+    interceptions: 0,
+    passingYards: 0,
+    touchdowns: 0,
+    tackles: 0,
+  };
+}
+
+function resetBallToPlayer(scene) {
+  scene.ball.x = scene.player.x + scene.player.w / 2 - scene.ball.w / 2;
+  scene.ball.y = scene.player.y + scene.player.h / 2 - scene.ball.h / 2;
+  scene.ball.vx = 0;
+  scene.ball.vy = 0;
+  scene.ball.inAir = false;
+}
+
+function isTouchdown(ball) {
+  const leftEndX = 40;
+  const rightEndX = canvas.width - 40;
+  const top = 20;
+  const bottom = canvas.height - 20;
+  const endZoneWidth = 40;
+  const inVertical = ball.y + ball.h > top && ball.y < bottom;
+  const inLeftEnd = ball.x < leftEndX + endZoneWidth && ball.x + ball.w > leftEndX;
+  const inRightEnd = ball.x + ball.w > rightEndX - endZoneWidth && ball.x < rightEndX;
+  if (!inVertical) return 0;
+  if (inRightEnd) return 1;
+  if (inLeftEnd) return -1;
+  return 0;
+}
+
+function rectsOverlap(a, b) {
+  return (
+    a.x < b.x + b.w &&
+    a.x + a.w > b.x &&
+    a.y < b.y + b.h &&
+    a.y + a.h > b.y
+  );
+}
+
+// ===== PLAYBOOK =====
+const PLAYBOOK = [
+  {
+    name: 'Go Route',
+    description: 'Single WR deep right',
+    routes: [
+      {
+        startX: 150,
+        startY: canvas.height / 2,
+        loop: false,
+        segments: [ { dx: 400, dy: 0, dur: 3.0 } ],
+      },
+    ],
+  },
+  {
+    name: 'Slant Left',
+    description: 'WR slant middle',
+    routes: [
+      {
+        startX: 220,
+        startY: canvas.height / 2 + 40,
+        loop: false,
+        segments: [
+          { dx: 150, dy: -80, dur: 2.0 },
+          { dx: 150, dy: -10, dur: 1.0 },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'Crossers',
+    description: 'Two WRs crossing',
+    routes: [
+      {
+        startX: 210,
+        startY: canvas.height / 2 - 40,
+        loop: false,
+        segments: [ { dx: 250, dy: 60, dur: 2.5 } ],
+      },
+      {
+        startX: 210,
+        startY: canvas.height / 2 + 40,
+        loop: false,
+        segments: [ { dx: 250, dy: -60, dur: 2.5 } ],
+      },
+    ],
+  },
+];
+
+// ===== HUD & UI =====
+function drawHUD(ctx) {
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 0, canvas.width, 40);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '14px sans-serif';
+  ctx.textBaseline = 'middle';
+  const time = Math.ceil(GameState.timeLeft);
+  ctx.fillText(`HOME ${GameState.homeScore} - ${GameState.awayScore} AWAY`, 20, 20);
+  ctx.fillText(`TIME: ${time}s`, canvas.width / 2 - 40, 20);
+  ctx.fillText(GameState.message, canvas.width - 340, 20);
+}
+
+function drawPlaybookBar(ctx) {
+  const h = 40;
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(0, canvas.height - h, canvas.width, h);
+  ctx.font = '13px sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('Plays: (1-3) | Click WR | M: Menu', 10, canvas.height - h / 2);
+  let offsetX = 260;
+  for (let i = 0; i < PLAYBOOK.length; i++) {
+    const play = PLAYBOOK[i];
+    const isSel = (i === GameState.selectedPlayIndex);
+    ctx.fillStyle = isSel ? '#33cc44' : '#cccccc';
+    ctx.fillText(`${i + 1}) ${play.name}`, offsetX, canvas.height - h / 2);
+    offsetX += 140;
+  }
+}
+
+function drawSummaryOverlay(ctx) {
+  if (!GameState.inSummary) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '24px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('GAME OVER', canvas.width / 2, 80);
+  ctx.font = '18px sans-serif';
+  ctx.fillText(`Final Score: HOME ${GameState.homeScore} - ${GameState.awayScore} AWAY`, canvas.width / 2, 120);
+  const s = GameState.stats;
+  let y = 170;
+  const lines = [
+    `Pass Attempts: ${s.passAttempts}`,
+    `Completions:   ${s.completions}`,
+    `Interceptions: ${s.interceptions}`,
+    `Passing Yards: ${s.passingYards}`,
+    `TD Passes:     ${s.touchdowns}`,
+    `Tackles Made:  ${s.tackles}`,
+  ];
+  ctx.font = '16px monospace';
+  for (const line of lines) {
+    ctx.fillText(line, canvas.width / 2, y);
+    y += 26;
+  }
+  ctx.font = '16px sans-serif';
+  ctx.fillText(`Coins: ${GameState.coins} (Win gives +${CONFIG.WIN_COINS})`, canvas.width / 2, y + 20);
+  ctx.fillText('Press R to restart or M for Main Menu', canvas.width / 2, y + 50);
+  ctx.textAlign = 'left';
+}
+
+// ===== PACK / DRAFT LOGIC =====
+function rollStarRating() {
+  // 1.0, 1.5, 2.0, ..., 5.0
+  const steps = 8; // 0..8 -> 1.0 + 0.5*i
+  const i = Math.floor(Math.random() * (steps + 1));
+  return 1 + 0.5 * i;
+}
+
+function randomPlayerName() {
+  const first = ['Max', 'Cole', 'Jett', 'Troy', 'Zane', 'Blake', 'Duke', 'Reid'];
+  const last  = ['Harper', 'Knight', 'Brooks', 'Stone', 'Madden', 'Cruz', 'Foster', 'Fields'];
+  const f = first[Math.floor(Math.random() * first.length)];
+  const l = last[Math.floor(Math.random() * last.length)];
+  return f + ' ' + l;
+}
+
+function openPackIfPossible() {
+  if (GameState.coins < CONFIG.PACK_COST) {
+    GameState.lastDraftedPlayer = { name: 'Not enough coins', stars: 0 };
+    return;
+  }
+  GameState.coins -= CONFIG.PACK_COST;
+  const stars = rollStarRating();
+  const name = randomPlayerName();
+  GameState.lastDraftedPlayer = { name, stars };
+}
+
+// ===== MAIN MENU SCENE =====
+class MenuScene extends Scene {
+  constructor() {
+    super();
+    this.blinkTimer = 0;
+  }
+  update(dt) {
+    this.blinkTimer += dt;
+  }
+  draw(ctx) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#062b3d';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = '32px sans-serif';
+    ctx.fillText('RETRO-STYLE FOOTBALL', canvas.width / 2, 70);
+
+    ctx.font = '18px sans-serif';
+    ctx.fillText('WASD / Arrows to move, Click to throw to receivers', canvas.width / 2, 120);
+    ctx.fillText('1-3: Choose play | D: Cycle difficulty', canvas.width / 2, 150);
+    ctx.fillText('SPACE: pause in-game | R: restart game | M: main menu', canvas.width / 2, 180);
+
+    ctx.font = '20px sans-serif';
+    ctx.fillText(`Difficulty: ${CONFIG.DIFFICULTY}`, canvas.width / 2, 220);
+
+    // Coins and packs
+    ctx.font = '18px sans-serif';
+    ctx.fillText(`Coins: ${GameState.coins}`, canvas.width / 2, 260);
+    ctx.font = '16px sans-serif';
+    ctx.fillText(`Press P to open a pack (${CONFIG.PACK_COST} coins)`, canvas.width / 2, 290);
+
+    if (GameState.lastDraftedPlayer) {
+      const lp = GameState.lastDraftedPlayer;
+      ctx.font = '16px monospace';
+      const label = lp.stars > 0
+        ? `Last draft: ${lp.name} - ${lp.stars.toFixed(1)}★`
+        : lp.name;
+      ctx.fillText(label, canvas.width / 2, 320);
+    }
+
+    const showPress = Math.floor(this.blinkTimer * 2) % 2 === 0;
+    if (showPress) {
+      ctx.font = '20px sans-serif';
+      ctx.fillText('Press ENTER to Start Game', canvas.width / 2, 370);
+    }
+
+    ctx.textAlign = 'left';
+  }
+}
+
+// ===== FIELD SCENE =====
+class FieldScene extends Scene {
+  constructor() {
+    super();
+    this.player = new Player(100, canvas.height / 2);
+    this.ball = new Ball(200, canvas.height / 2);
+    this.receivers = [];
+    this.defenders = [];
+    this.add(this.player);
+    this.add(this.ball);
+    this.applyPlay(PLAYBOOK[GameState.selectedPlayIndex]);
+    this.spawnDefenders();
+
+    window.addEventListener('mousedown', (e) => {
+      if (GameState.paused || GameState.inSummary || !(Game.currentScene instanceof FieldScene)) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      let best = null;
+      let bestDist = Infinity;
+      for (const r of this.receivers) {
+        const cx = r.x + r.w / 2;
+        const cy = r.y + r.h / 2;
+        const d = Math.hypot(mx - cx, my - cy);
+        if (d < bestDist) { bestDist = d; best = r; }
+      }
+      if (!best) return;
+      const power = 2.5;
+      this.ball.x = this.player.x + this.player.w / 2 - this.ball.w / 2;
+      this.ball.y = this.player.y + this.player.h / 2 - this.ball.h / 2;
+      this.ball.throwTo(best.x + best.w / 2, best.y + best.h / 2, power);
+      GameState.stats.passAttempts++;
+      GameState.message = 'Ball in the air...';
+    });
+  }
+
+  applyPlay(play) {
+    for (const r of this.receivers) r.dead = true;
+    this.objects = this.objects.filter(o => !(o instanceof Receiver));
+    this.receivers = [];
+    for (const route of play.routes) {
+      const r = new Receiver(route.startX, route.startY);
+      r.setRoute(route);
+      this.receivers.push(r);
+      this.add(r);
+    }
+  }
+
+  spawnDefenders() {
+    this.defenders = [];
+    const count = 3;
+    for (let i = 0; i < count; i++) {
+      const x = canvas.width / 2 + 100 + i * 30;
+      const y = 100 + i * 60;
+      const d = new Defender(x, y);
+      this.defenders.push(d);
+      this.add(d);
+    }
+  }
+
+  resetDefenders() {
+    this.objects = this.objects.filter(o => !(o instanceof Defender));
+    this.spawnDefenders();
+  }
+
+  update(dt) {
+    if (!GameState.paused && !GameState.inSummary) {
+      GameState.timeLeft -= dt;
+      if (GameState.timeLeft <= 0) {
+        GameState.timeLeft = 0;
+        GameState.paused = true;
+        GameState.inSummary = true;
+        GameState.message = 'Game Over';
+        // coin reward on win
+        if (GameState.homeScore > GameState.awayScore) {
+          GameState.coins += CONFIG.WIN_COINS;
         }
-    </script>
+      }
+    }
+
+    if (!GameState.paused && !GameState.inSummary) {
+      this.player.update(dt);
+      this.ball.update(dt);
+      for (const r of this.receivers) r.update(dt);
+      if (this.defenders) {
+        const chaseTarget = this.ball.inAir ? this.ball : this.player;
+        for (const d of this.defenders) d.update(dt, chaseTarget);
+      }
+
+      // tackle detection
+      if (this.defenders) {
+        for (const d of this.defenders) {
+          if (rectsOverlap(d, this.player)) {
+            GameState.stats.tackles++;
+            GameState.message = 'Tackled! Play reset';
+            resetBallToPlayer(this);
+            this.resetDefenders();
+            this.applyPlay(PLAYBOOK[GameState.selectedPlayIndex]);
+            break;
+          }
+        }
+      }
+
+      // pass resolution
+      if (this.ball.inAir) {
+        let caught = false;
+        for (const r of this.receivers) {
+          if (rectsOverlap(this.ball, r)) {
+            caught = true;
+            GameState.stats.completions++;
+            const yards = Math.max(0, Math.floor((this.ball.x - this.player.x) / 10));
+            GameState.stats.passingYards += yards;
+            GameState.message = 'Catch!';
+            this.ball.inAir = false;
+            this.ball.vx = 0;
+            this.ball.vy = 0;
+            break;
+          }
+        }
+        if (!caught) {
+          const diff = DIFFICULTY_SETTINGS[CONFIG.DIFFICULTY] || DIFFICULTY_SETTINGS.NORMAL;
+          for (const d of this.defenders) {
+            if (rectsOverlap(this.ball, d)) {
+              if (Math.random() < diff.intChance) {
+                GameState.stats.interceptions++;
+                GameState.message = 'Intercepted! Play reset';
+              } else {
+                GameState.message = 'Defended pass!';
+              }
+              this.ball.inAir = false;
+              this.ball.vx = 0;
+              this.ball.vy = 0;
+              resetBallToPlayer(this);
+              this.resetDefenders();
+              this.applyPlay(PLAYBOOK[GameState.selectedPlayIndex]);
+              break;
+            }
+          }
+        }
+      }
+
+      const td = isTouchdown(this.ball);
+      if (td !== 0) {
+        if (td > 0) {
+          GameState.homeScore += 7;
+          GameState.message = 'Touchdown Home!';
+          GameState.stats.touchdowns++;
+        } else {
+          GameState.awayScore += 7;
+          GameState.message = 'Touchdown Away!';
+        }
+        resetBallToPlayer(this);
+        this.resetDefenders();
+        this.applyPlay(PLAYBOOK[GameState.selectedPlayIndex]);
+      }
+    }
+  }
+
+  draw(ctx) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawField(ctx);
+    ctx.fillStyle = '#0033aa';
+    ctx.fillRect(40, 20, 40, canvas.height - 40);
+    ctx.fillStyle = '#aa3300';
+    ctx.fillRect(canvas.width - 80, 20, 40, canvas.height - 40);
+    for (const o of this.objects) o.draw(ctx);
+    drawHUD(ctx);
+    drawPlaybookBar(ctx);
+    drawSummaryOverlay(ctx);
+  }
+}
+
+// ===== GAME RESET =====
+function resetGame(scene) {
+  GameState.homeScore = 0;
+  GameState.awayScore = 0;
+  GameState.timeLeft = CONFIG.GAME_LENGTH_SECONDS;
+  GameState.message = 'New Game! 1-3 to pick play';
+  GameState.paused = false;
+  GameState.inSummary = false;
+  resetStats();
+  resetBallToPlayer(scene);
+  scene.resetDefenders();
+  scene.applyPlay(PLAYBOOK[GameState.selectedPlayIndex]);
+}
+
+// ===== GLOBAL KEYS =====
+window.addEventListener('keydown', (e) => {
+  const scene = Game.currentScene;
+
+  // ENTER: start game from menu
+  if (e.code === 'Enter') {
+    if (scene instanceof MenuScene) {
+      const field = new FieldScene();
+      resetGame(field);
+      Game.switchScene(field);
+      return;
+    }
+  }
+
+  // M: back to menu
+  if (e.key && e.key.toLowerCase() === 'm') {
+    Game.switchScene(new MenuScene());
+    return;
+  }
+
+  // P: open pack from menu
+  if (e.key && e.key.toLowerCase() === 'p') {
+    if (scene instanceof MenuScene) {
+      openPackIfPossible();
+      return;
+    }
+  }
+
+  if (scene instanceof FieldScene) {
+    if (e.code === 'Space') {
+      if (!GameState.inSummary) {
+        GameState.paused = !GameState.paused;
+        GameState.message = GameState.paused ? 'Paused' : 'Game resumed';
+      }
+    }
+    if (e.code === 'KeyR') {
+      resetGame(scene);
+    }
+    if (e.key === '1' || e.key === '2' || e.key === '3') {
+      const idx = parseInt(e.key, 10) - 1;
+      if (idx >= 0 && idx < PLAYBOOK.length) {
+        GameState.selectedPlayIndex = idx;
+        GameState.message = `Play: ${PLAYBOOK[idx].name}`;
+        scene.applyPlay(PLAYBOOK[idx]);
+      }
+    }
+  }
+
+  // D: cycle difficulty (menu or game)
+  if (e.key && e.key.toLowerCase() === 'd') {
+    const order = ['EASY', 'NORMAL', 'HARD'];
+    let i = order.indexOf(CONFIG.DIFFICULTY);
+    if (i === -1) i = 1;
+    i = (i + 1) % order.length;
+    CONFIG.DIFFICULTY = order[i];
+    GameState.message = `Difficulty: ${CONFIG.DIFFICULTY}`;
+  }
+});
+
+// ===== START AT MAIN MENU =====
+const startScene = new MenuScene();
+Game.start(startScene);
+</script>
 </body>
 </html>
